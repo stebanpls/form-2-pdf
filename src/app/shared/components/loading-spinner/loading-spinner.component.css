@@ -1,0 +1,44 @@
+:host {
+  /* display: block; */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+.spinner {
+  position: relative; /* Necesario para el pseudo-elemento */
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  /* El fondo ahora es el degradado */
+  background: linear-gradient(45deg, var(--header-bg-start), var(--accent-color));
+  animation: spin 1s linear infinite;
+}
+
+/* Este pseudo-elemento crea el "agujero" en el centro */
+.spinner::before {
+  content: '';
+  position: absolute;
+  top: 8px; /* Este es el "grosor" del borde */
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  background: var(--bg-light, #fafafa); /* Coincide con el fondo de la página */
+  border-radius: 50%;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-message {
+  font-size: 1.1rem;
+  color: var(--text-dark);
+}

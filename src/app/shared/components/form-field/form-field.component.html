@@ -1,0 +1,24 @@
+<div class="form-field" [formGroup]="form">
+  @if (field.type === 'detailed_multiple_choice') {
+  <div class="group-label" [innerHTML]="field.label"></div>
+  } @else {
+  <label [for]="field.id" [innerHTML]="field.label"></label>
+  } @switch (field.type) { @case ('text') {
+  <input [id]="field.id" type="text" [formControlName]="field.id" class="form-input" />
+  } @case ('date') {
+  <input [id]="field.id" type="date" [formControlName]="field.id" class="form-input" />
+  } @case ('textarea') {
+  <textarea [id]="field.id" [formControlName]="field.id" rows="5" class="form-input"></textarea>
+  } @case('detailed_multiple_choice') {
+  <div [formGroupName]="field.id" class="multiple-choice-group">
+    @for (option of field.options; track option.id) {
+    <div class="checkbox-option">
+      <input [id]="field.id + '-' + option.id" type="checkbox" [formControlName]="option.id" />
+      <label [for]="field.id + '-' + option.id">{{ option.label }}</label>
+    </div>
+    }
+  </div>
+  } } @if (control?.invalid && control?.touched) {
+  <div class="error-message">Este campo es obligatorio.</div>
+  }
+</div>

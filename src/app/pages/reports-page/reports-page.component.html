@@ -1,0 +1,59 @@
+<div class="reports-container">
+  <h1>Reportes Guardados</h1>
+
+  <div class="search-bar">
+    <input
+      type="text"
+      id="project-search"
+      name="projectSearch"
+      placeholder="Buscar por nombre de proyecto..."
+      class="form-input"
+      [ngModel]="searchTerm()"
+      (ngModelChange)="searchTerm.set($event)"
+      (keyup.enter)="onSearch()"
+    />
+    <button class="btn btn-primary" (click)="onSearch()" [disabled]="isLoading()">
+      {{ isLoading() ? 'Buscando...' : 'Buscar' }}
+    </button>
+  </div>
+
+  @if (isLoading() && reports().length === 0) {
+  <div class="loading-state">
+    <app-loading-spinner message="Cargando reportes..."></app-loading-spinner>
+  </div>
+  } @else if (reports().length === 0) {
+  <p>No se encontraron reportes.</p>
+  } @else {
+  <ul class="report-list">
+    @for (report of reports(); track report.id) {
+    <li class="report-item">
+      <span class="report-name">{{ report.data['projectName'] || 'Reporte sin nombre' }}</span>
+      <div class="report-actions">
+        <button class="btn btn-primary" (click)="onViewPdf(report)" [disabled]="isLoading()">
+          Ver PDF
+        </button>
+        <button class="btn btn-secondary" (click)="onEdit(report.id)" [disabled]="isLoading()">
+          Editar
+        </button>
+        <button
+          class="btn btn-danger"
+          (click)="onDelete(report.id, report.data['projectName'])"
+          [disabled]="isLoading()"
+        >
+          Eliminar
+        </button>
+      </div>
+    </li>
+    }
+  </ul>
+  }
+</div>
+
+<!-- PDF Preview Modal -->
+@if (pdfStateService.safePdfPreviewUrl(); as url) {
+<app-pdf-preview-modal
+  [url]="url"
+  (close)="onClosePreview()"
+  (download)="onDownloadPdf()"
+></app-pdf-preview-modal>
+}

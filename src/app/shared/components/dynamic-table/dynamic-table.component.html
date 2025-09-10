@@ -1,0 +1,47 @@
+<!-- El contenedor principal ahora vive en el componente padre para controlar el espaciado -->
+<div class="dynamic-table-container">
+  <!-- El formArrayName se maneja en el componente padre, aquí solo trabajamos con el formArray que nos pasan -->
+  <!-- Encabezados de la tabla -->
+  <div class="table-header">
+    @for (col of fields; track col.id) {
+    <div class="table-cell header-cell">
+      {{ col.label }}@if(col.required){<span class="required-star">*</span>}
+    </div>
+    }
+    <div class="table-cell header-cell actions-header">Acciones</div>
+  </div>
+
+  <!-- Filas de la tabla -->
+  @for (rowGroup of formArray.controls; track i; let i = $index) {
+  <div class="table-row" [formGroup]="getFormControl(i)">
+    @for (col of fields; track col.id) {
+    <div class="table-cell">
+      <input
+        [id]="fieldId + '-' + i + '-' + col.id"
+        [name]="fieldId + '-' + i + '-' + col.id"
+        [type]="col.type"
+        [formControlName]="col.id"
+        class="full-width"
+        [placeholder]="col.label"
+      />
+    </div>
+    }
+    <div class="table-cell actions-cell">
+      <button
+        type="button"
+        (click)="onRemoveRow(i)"
+        class="remove-row-btn"
+        [disabled]="formArray.length <= 1"
+      >
+        &times;
+      </button>
+    </div>
+  </div>
+  }
+  <!-- Botón para agregar nueva fila -->
+  <div class="table-actions">
+    <button type="button" (click)="onAddRow()" class="btn btn-primary add-row-btn">
+      {{ addRowText }}
+    </button>
+  </div>
+</div>

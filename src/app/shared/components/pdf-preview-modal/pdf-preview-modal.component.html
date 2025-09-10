@@ -1,0 +1,12 @@
+<div class="preview-overlay" (click)="close.emit()">
+  <div class="preview-container" (click)="onContainerClick($event)">
+    <div class="preview-header">
+      <h3>Vista Previa del Documento</h3>
+      <div class="preview-header-actions">
+        <button class="btn btn-primary" (click)="download.emit()">Descargar PDF</button>
+        <button class="btn btn-icon btn-danger close-button" (click)="close.emit()">×</button>
+      </div>
+    </div>
+    <iframe [src]="url" title="Vista previa del PDF"></iframe>
+  </div>
+</div>

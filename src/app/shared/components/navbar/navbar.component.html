@@ -1,0 +1,25 @@
+<header class="navbar-container">
+  <a [routerLink]="['/']" class="navbar-brand">
+    <h1 class="navbar-title">{{ title() }}</h1>
+  </a>
+  <nav class="nav-links">
+    <ul>
+      <li>
+        <a
+          [routerLink]="['/formulario']"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: true }"
+          >Crear Reporte</a
+        >
+      </li>
+      <li>
+        <a
+          [routerLink]="['/reportes']"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: true }"
+          >Ver Reportes</a
+        >
+      </li>
+    </ul>
+  </nav>
+</header>

@@ -1,0 +1,90 @@
+:host {
+  display: block;
+}
+
+/* --- Dynamic Table Styles --- */
+.dynamic-table-container {
+  /* No margin-top here, let the parent decide spacing */
+  border: 1px solid var(--border-light-color);
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: var(--bg-light);
+}
+
+.table-header,
+.table-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-light-color);
+}
+
+.table-header {
+  font-weight: bold;
+  color: var(--text-dark);
+}
+
+.table-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.table-cell {
+  flex: 1; /* Each column takes equal space */
+}
+
+.header-cell {
+  padding-bottom: 0.5rem;
+}
+
+.actions-header {
+  flex: 0 0 80px; /* Fixed width for actions header */
+  text-align: center;
+}
+
+.actions-cell {
+  flex: 0 0 80px; /* Fixed width for actions column */
+  display: flex;
+  justify-content: center;
+}
+
+.table-cell input.full-width {
+  width: 100%;
+  box-sizing: border-box; /* Ensures padding is included in the width */
+}
+
+.table-actions {
+  margin-top: 1rem;
+  text-align: right;
+}
+
+.add-row-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  /* Inherits from .btn and .btn-primary */
+}
+
+.remove-row-btn {
+  background-color: var(--danger-color); /* Red for remove */
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.remove-row-btn:hover:not(:disabled) {
+  background-color: var(--danger-hover-color);
+}
+
+.required-star {
+  color: var(--danger-color);
+  margin-left: 2px;
+}

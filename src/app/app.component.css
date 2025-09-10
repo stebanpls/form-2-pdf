@@ -1,0 +1,8 @@
+:host {
+  display: block;
+}
+
+/* General styles for the main app layout */
+main.main {
+  padding: 0;
+}

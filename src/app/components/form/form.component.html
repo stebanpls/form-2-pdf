@@ -1,0 +1,57 @@
+<div class="form-container">
+  @if(isFormLoading()) {
+  <div class="form-loading-state">
+    <app-loading-spinner message="Cargando formulario..."></app-loading-spinner>
+  </div>
+  } @else {
+  <form [formGroup]="dataForm">
+    <h2>{{ dataForm.get('title')?.value || reportTitle() }}</h2>
+
+    @for (section of formFields() | groupBySection; track section.title) {
+    <h3 class="section-title">{{ section.title }}</h3>
+
+    @for (field of section.fields; track field.id) {
+    <!-- RENDERIZADO DE TABLA DINÁMICA -->
+    @if (field.type === 'dynamic_table') {
+    <app-dynamic-table
+      [formArray]="getFormArray(field.id)"
+      [fields]="field.fields || []"
+      [fieldId]="field.id"
+      [addRowText]="field.addRowLabel || '+ Agregar Fila'"
+      (add)="onAddRow(field)"
+      (remove)="onRemoveRow(field.id, $event)"
+    ></app-dynamic-table>
+    } @else {
+    <!-- RENDERIZADO DE CAMPOS NORMALES (DELEGADO) -->
+    <app-form-field [field]="field" [form]="dataForm"></app-form-field>
+    } } }
+
+    <div class="form-actions">
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="onSaveToDatabase()"
+        [disabled]="isLoading() || dataForm.invalid"
+      >
+        {{ isLoading() ? 'Guardando...' : 'Guardar en Base de Datos' }}</button
+      ><button
+        type="button"
+        (click)="onGeneratePreview()"
+        class="btn btn-primary"
+        [disabled]="isLoading() || dataForm.invalid"
+      >
+        {{ isLoading() ? 'Generando...' : 'Generar Vista Previa' }}
+      </button>
+    </div>
+  </form>
+  }
+</div>
+
+<!-- PDF Preview Modal -->
+@if (pdfStateService.safePdfPreviewUrl(); as url) {
+<app-pdf-preview-modal
+  [url]="url"
+  (close)="onClosePreview()"
+  (download)="onDownloadPdf()"
+></app-pdf-preview-modal>
+}
