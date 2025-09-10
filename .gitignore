@@ -5,11 +5,20 @@
 /tmp
 /out-tsc
 /bazel-out
+/coverage/
+/e2e/test-output/
 
 # Node
 /node_modules
 npm-debug.log
 yarn-error.log
+yarn-debug.log*
+package-lock.json
+yarn.lock
+
+# Environment files
+/.env.js
+/.env.production.js
 
 # IDEs and editors
 .idea/
@@ -40,3 +49,21 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Compressed files
+*.rar
+*.zip
+*.7z
+*.tar
+*.gz
+
+# Firebase
+.firebase
+*-debug.log
+.runtimeconfig.json
+
+# Firebase environment files with secrets
+/src/environments/environment.*.ts
+
+# Document Files
+*.pdf
