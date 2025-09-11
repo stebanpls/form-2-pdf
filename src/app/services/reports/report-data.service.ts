@@ -15,9 +15,7 @@ import {
 import { FormField, ReportData } from '../../models/report.model';
 import { runInInjectionContext } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable()
 export class ReportDataService {
   // Renaming the class
   private firestore = inject(Firestore);

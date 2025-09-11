@@ -1,5 +1,6 @@
 import { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
-import { FormField, FormSection, ReportData } from '../../../models/report.model';
+import { FormField, ReportData } from '../../../models/report.model';
+import { FormSection } from '../../../models/form.model';
 import { getPdfStyles, STYLES } from './pdf-report.config';
 import { SectionGrouperUtil } from '../../../shared/utils/section-grouper.util';
 import { ISectionBuilder } from './section-builders/isection.builder';
@@ -47,28 +48,28 @@ export class ReportPdfBuilder {
     const fieldsForPdf = allFields.filter((f) => f.id !== 'title');
     const groupedSections = SectionGrouperUtil.group(fieldsForPdf);
 
-    return groupedSections.map((section, index) => {
+    const sectionsContent = groupedSections.map((section) => {
       const builder = this.sectionBuilders.find((b) => b.canHandle(section));
       if (builder) {
-        const sectionContent = builder.build(section, rawData);
-
-        // Si es la última sección, eliminamos el margen inferior para evitar
-        // que se genere una página en blanco si el contenido llega justo al final.
-        const isLastSection = index === groupedSections.length - 1;
-        if (
-          isLastSection &&
-          typeof sectionContent === 'object' &&
-          sectionContent !== null &&
-          'margin' in sectionContent
-        ) {
-          (sectionContent as { margin?: [number, number, number, number] }).margin = [0, 0, 0, 0];
-        }
-
-        return sectionContent;
+        return builder.build(section, rawData);
       }
       // Esto no debería ocurrir si StandardSectionBuilder está configurado como fallback.
       console.warn(`No se encontró un builder para la sección: ${section.title}`);
       return [];
     });
+
+    // Post-procesamiento: Si hay contenido, elimina el margen inferior de la última sección.
+    // Esto es más limpio que hacerlo dentro del bucle de mapeo.
+    if (sectionsContent.length > 0) {
+      const lastSection = sectionsContent[sectionsContent.length - 1];
+      if (typeof lastSection === 'object' && lastSection !== null && 'margin' in lastSection) {
+        // Clonamos el array de margen para evitar mutaciones inesperadas.
+        const margin = [...((lastSection as any).margin || [0, 0, 0, 0])];
+        margin[3] = 0; // Establece el margen inferior a 0.
+        (lastSection as any).margin = margin;
+      }
+    }
+
+    return sectionsContent;
   }
 }

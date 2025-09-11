@@ -1,5 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { FormField, FormSection } from '../../models/report.model';
+import { FormField } from '../../models/report.model';
+import { FormSection } from '../../models/form.model';
 import { SectionGrouperUtil } from '../utils/section-grouper.util';
 
 @Pipe({

@@ -1,5 +1,6 @@
 import { Content, TableCell } from 'pdfmake/interfaces';
-import { FormSection, ReportData } from '../../../../models/report.model';
+import { ReportData } from '../../../../models/report.model';
+import { FormSection } from '../../../../models/form.model';
 import { getDynamicTableLayout, STYLES } from '../pdf-report.config';
 import { ISectionBuilder } from './isection.builder';
 import { CellContentBuilder } from '../cell-content.builder';

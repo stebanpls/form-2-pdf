@@ -1,13 +1,27 @@
 import { Injectable, WritableSignal, inject } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { ReportDataService } from './report-data.service';
-import { ActionResult, FormField, ReportData } from '../../models/report.model';
+import { FormField, ReportData } from '../../models/report.model';
+import { ActionResult } from '../../models/action-result.model';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable()
 export class ReportCrudService {
   private readonly reportDataService = inject(ReportDataService);
+
+  /**
+   * Guarda un reporte, decidiendo si crearlo o actualizarlo basado en la presencia de un ID.
+   */
+  async saveReport(
+    id: string | null,
+    form: FormGroup,
+    formFields: FormField[],
+    isLoading: WritableSignal<boolean>
+  ): Promise<ActionResult> {
+    if (id) {
+      return this.updateReport(id, form, formFields, isLoading);
+    }
+    return this.createReport(form, formFields, isLoading);
+  }
 
   async createReport(
     form: FormGroup,

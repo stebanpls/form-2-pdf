@@ -11,9 +11,7 @@ import { ReportDataService } from '../reports/report-data.service';
 import { FormField, FormFieldOption } from '../../models/report.model';
 import { from } from 'rxjs';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable()
 export class DynamicFormService {
   private fb = inject(FormBuilder);
   private dataService = inject(ReportDataService);

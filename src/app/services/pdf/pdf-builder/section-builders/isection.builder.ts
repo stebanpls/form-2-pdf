@@ -1,5 +1,6 @@
 import { Content } from 'pdfmake/interfaces';
-import { FormSection, ReportData } from '../../../../models/report.model';
+import { ReportData } from '../../../../models/report.model';
+import { FormSection } from '../../../../models/form.model';
 
 /**
  * Defines the contract for a section builder.

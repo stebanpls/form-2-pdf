@@ -1,4 +1,5 @@
-import { FormField, FormSection } from '../../models/report.model';
+import { FormField } from '../../models/report.model';
+import { FormSection } from '../../models/form.model';
 
 /**
  * Provides a centralized utility for grouping form fields into sections.

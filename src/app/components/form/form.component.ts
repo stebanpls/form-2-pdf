@@ -8,7 +8,8 @@ import {
 } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormField, ReportForm } from '../../models/report.model';
+import { FormField } from '../../models/report.model';
+import { ReportForm } from '../../models/form.model';
 import { CommonModule } from '@angular/common';
 import { DynamicFormService } from '../../services/form/dynamic-form.service';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -152,11 +153,12 @@ export class FormComponent {
   // Method to save to the Firebase database
   async onSaveToDatabase(): Promise<void> {
     const id = this.reportId();
-    const action = id
-      ? this.reportCrudService.updateReport(id, this.dataForm, this.formFields(), this.isLoading)
-      : this.reportCrudService.createReport(this.dataForm, this.formFields(), this.isLoading);
-
-    const result = await action;
+    const result = await this.reportCrudService.saveReport(
+      id ?? null,
+      this.dataForm,
+      this.formFields(),
+      this.isLoading
+    );
 
     if (result.success) {
       this.notificationService.show(

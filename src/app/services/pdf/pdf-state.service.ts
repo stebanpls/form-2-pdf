@@ -2,12 +2,9 @@ import { computed, inject, Injectable, signal, WritableSignal } from '@angular/c
 import { FormGroup } from '@angular/forms';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { PdfGeneratorService } from './pdf-generator.service';
-import {
-  ActionResult,
-  FormField,
-  PdfGenerationContext,
-  ReportData,
-} from '../../models/report.model';
+import { FormField, ReportData } from '../../models/report.model';
+import { ActionResult } from '../../models/action-result.model';
+import { PdfGenerationContext } from '../../models/pdf.model';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 @Injectable({

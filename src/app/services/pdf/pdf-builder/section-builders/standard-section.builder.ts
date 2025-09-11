@@ -1,5 +1,6 @@
 import { Content, Table, TableCell } from 'pdfmake/interfaces';
-import { FormSection, ReportData } from '../../../../models/report.model';
+import { ReportData } from '../../../../models/report.model';
+import { FormSection } from '../../../../models/form.model';
 import { getLayoutForSpecialRows, STYLES } from '../pdf-report.config';
 import { ISectionBuilder } from './isection.builder';
 import { PdfReportTableBodyBuilder } from '../pdf-report-table-body.builder';
