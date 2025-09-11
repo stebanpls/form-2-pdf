@@ -1,9 +1,12 @@
-import { Content, Table, TableCell } from 'pdfmake/interfaces';
-import { ReportData } from '../../../../models/report.model';
+import { Content, Table, TableCell, TableLayout } from 'pdfmake/interfaces';
+import { FormField, ReportData } from '../../../../models/report.model';
 import { FormSection } from '../../../../models/form.model';
-import { getLayoutForSpecialRows, STYLES } from '../pdf-report.config';
+import { CELL_HORIZONTAL_PADDING, getLayoutForSpecialRows, STYLES } from '../pdf-report.config';
 import { ISectionBuilder } from './isection.builder';
 import { PdfReportTableBodyBuilder } from '../pdf-report-table-body.builder';
+import { CellContentBuilder } from '../cell-content.builder';
+
+const HEADER_FIELD_IDS = ['projectName', 'projectManager', 'generationDate'];
 
 export class StandardSectionBuilder implements ISectionBuilder {
   // Este builder manejará cualquier sección que no sea de un tipo especial.
@@ -12,19 +15,25 @@ export class StandardSectionBuilder implements ISectionBuilder {
   }
 
   build(section: FormSection, rawData: ReportData): Content {
-    const tableBodyBuilder = new PdfReportTableBodyBuilder(rawData);
-
-    // Filtramos solo los campos que este constructor debe manejar.
-    const standardFields = section.fields.filter(
-      (f) => f.type !== 'dynamic_table' && f.type !== 'detailed_multiple_choice'
+    // Separamos los campos del encabezado de los campos del cuerpo de la sección.
+    const headerFields = section.fields.filter((f) => HEADER_FIELD_IDS.includes(f.id));
+    const bodyFields = section.fields.filter(
+      (f) =>
+        !HEADER_FIELD_IDS.includes(f.id) &&
+        f.type !== 'dynamic_table' &&
+        f.type !== 'detailed_multiple_choice'
     );
 
-    if (standardFields.length === 0) {
+    if (headerFields.length === 0 && bodyFields.length === 0) {
       return []; // No hay nada que renderizar en esta sección.
     }
 
-    // Usamos nuestro nuevo constructor inteligente para crear las filas de los campos.
-    const fieldRows = tableBodyBuilder.build(standardFields);
+    // Usamos el constructor de cuerpo de tabla solo para los campos del cuerpo.
+    let fieldRows: any[][] = [];
+    if (bodyFields.length > 0) {
+      const tableBodyBuilder = new PdfReportTableBodyBuilder(rawData);
+      fieldRows = tableBodyBuilder.build(bodyFields);
+    }
 
     const sectionTableBody: TableCell[][] = [];
 
@@ -34,6 +43,11 @@ export class StandardSectionBuilder implements ISectionBuilder {
         { text: section.title, style: STYLES.SECTION_HEADER, colSpan: 2, alignment: 'center' },
         {}, // Placeholder para la columna que se está abarcando (spanned).
       ]);
+    }
+
+    // Si hay campos de encabezado, los añadimos como una fila especial anidada.
+    if (headerFields.length > 0) {
+      sectionTableBody.push(this._createHeaderRow(headerFields, rawData));
     }
 
     // Añadimos las filas de campos que generamos.
@@ -51,5 +65,49 @@ export class StandardSectionBuilder implements ISectionBuilder {
       layout: getLayoutForSpecialRows(),
       margin: [0, 0, 0, 15],
     };
+  }
+
+  /**
+   * Crea una fila especial para los metadatos del encabezado.
+   * Esta fila contiene una tabla anidada para permitir un layout de múltiples columnas
+   * que se expande para llenar el ancho completo.
+   */
+  private _createHeaderRow(fields: FormField[], rawData: ReportData): any[] {
+    const cellBuilder = new CellContentBuilder(rawData);
+    // Cada par de etiqueta/valor necesita su propio ancho 'auto' y '*'.
+    const widths = fields.flatMap(() => ['auto', '*']);
+
+    // Crea una única fila de celdas, intercalando etiquetas y valores.
+    const interleavedRow = fields.flatMap((field) => [
+      cellBuilder.build(field, true),
+      cellBuilder.build(field, false),
+    ]);
+
+    const nestedTable = {
+      table: {
+        widths: widths,
+        body: [interleavedRow],
+      },
+      // Usamos un layout sin bordes para que se integre visualmente.
+      layout: {
+        hLineWidth: () => 0,
+        vLineWidth: () => 0,
+        paddingTop: () => 4, // Menos padding vertical para el encabezado
+        paddingBottom: () => 4,
+      },
+    };
+
+    // La celda contenedora abarca las 2 columnas de la tabla principal.
+    // La bandera 'isGroup' le dice al layout principal que no aplique su propio padding.
+    const containerCell = {
+      ...nestedTable,
+      colSpan: 2,
+      isGroup: true,
+      // CLAVE: El margen horizontal negativo contrarresta el padding de la tabla padre.
+      margin: [-CELL_HORIZONTAL_PADDING, 0, -CELL_HORIZONTAL_PADDING, 0],
+    };
+
+    // La fila completa es la celda contenedora y un placeholder para la columna abarcada.
+    return [containerCell, {}];
   }
 }

@@ -16,7 +16,7 @@ export interface GroupCell extends TableCellProperties {
 }
 
 const CELL_VERTICAL_PADDING = 8;
-const CELL_HORIZONTAL_PADDING = 8;
+export const CELL_HORIZONTAL_PADDING = 8;
 
 export const COLORS = {
   BORDER: '#bfbfbf',
@@ -59,7 +59,7 @@ export function getPdfStyles(): { [key: string]: Style } {
       fontSize: 10,
       alignment: 'justify',
       margin: [0, 0, 0, 0], // El padding horizontal ahora se maneja en el layout de la tabla.
-      fillColor: 'red'
+      fillColor: 'red',
     },
     [STYLES.TABLE_HEADER]: {
       bold: true,

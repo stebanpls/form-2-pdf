@@ -1,7 +1,7 @@
 import { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
 import { FormField, ReportData } from '../../../models/report.model';
 import { FormSection } from '../../../models/form.model';
-import { getPdfStyles, STYLES } from './pdf-report.config';
+import { COLORS, getPdfStyles, STYLES } from './pdf-report.config';
 import { SectionGrouperUtil } from '../../../shared/utils/section-grouper.util';
 import { ISectionBuilder } from './section-builders/isection.builder';
 import { DynamicTableSectionBuilder } from './section-builders/dynamic-table-section.builder';
@@ -24,7 +24,19 @@ export class ReportPdfBuilder {
   }
 
   public build(rawData: ReportData, allFields: FormField[]): TDocumentDefinitions {
-    const content = this._buildSectionsContent(rawData, allFields);
+    const fieldsWithGenerated = [...allFields];
+    // Añadimos manualmente un FormField para 'generationDate' para que pueda ser procesado.
+    if (rawData['generationDate'] && !allFields.some((f) => f.id === 'generationDate')) {
+      fieldsWithGenerated.push({
+        id: 'generationDate',
+        label: 'Fecha de Elaboración',
+        type: 'text',
+        order: 2.5, // Lo ubicamos entre 'projectManager' y 'projectDescription'
+      });
+    }
+    fieldsWithGenerated.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    const sectionsContent = this._buildSectionsContent(rawData, fieldsWithGenerated);
 
     return {
       pageSize: 'LETTER',
@@ -32,7 +44,7 @@ export class ReportPdfBuilder {
       pageMargins: [40, 60, 40, 60],
       content: [
         { text: rawData['title'] || 'Reporte de Formulario', style: STYLES.HEADER },
-        ...content,
+        ...sectionsContent,
       ],
       styles: getPdfStyles(),
       defaultStyle: {

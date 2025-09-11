@@ -1,5 +1,5 @@
 import { FormField, ReportData } from '../../../models/report.model';
-import { getNestedTableLayout } from './pdf-report.config';
+import { CELL_HORIZONTAL_PADDING, getNestedTableLayout } from './pdf-report.config';
 import { FormFieldGrouper } from './form-field-grouper.builder';
 import { CellContentBuilder } from './cell-content.builder';
 
@@ -77,8 +77,10 @@ export class PdfReportTableBodyBuilder {
       ...nestedTable,
       colSpan: 2,
       /// Esta bandera es clave para que el layout de la tabla principal sepa
-      // que no debe aplicar padding, permitiendo que la tabla anidada ocupe todo el ancho.
+      // que no debe aplicar padding vertical, permitiendo que la tabla anidada ocupe todo el ancho.
       isGroup: true,
+      // CLAVE: El margen horizontal negativo contrarresta el padding de la tabla padre.
+      margin: [-CELL_HORIZONTAL_PADDING, 0, -CELL_HORIZONTAL_PADDING, 0],
     };
 
     // La fila debe tener un placeholder para la columna que se abarcó (spanned).
