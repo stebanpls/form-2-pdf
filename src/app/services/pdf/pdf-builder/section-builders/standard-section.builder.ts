@@ -1,7 +1,13 @@
 import { Content, Table, TableCell, TableLayout } from 'pdfmake/interfaces';
 import { FormField, ReportData } from '../../../../models/report.model';
 import { FormSection } from '../../../../models/form.model';
-import { CELL_HORIZONTAL_PADDING, getLayoutForSpecialRows, STYLES } from '../pdf-report.config';
+import {
+  CELL_HORIZONTAL_PADDING,
+  CELL_VERTICAL_PADDING,
+  getNestedTableLayout,
+  getLayoutForSpecialRows,
+  STYLES,
+} from '../pdf-report.config';
 import { ISectionBuilder } from './isection.builder';
 import { PdfReportTableBodyBuilder } from '../pdf-report-table-body.builder';
 import { CellContentBuilder } from '../cell-content.builder';
@@ -88,13 +94,8 @@ export class StandardSectionBuilder implements ISectionBuilder {
         widths: widths,
         body: [interleavedRow],
       },
-      // Usamos un layout sin bordes para que se integre visualmente.
-      layout: {
-        hLineWidth: () => 0,
-        vLineWidth: () => 0,
-        paddingTop: () => 4, // Menos padding vertical para el encabezado
-        paddingBottom: () => 4,
-      },
+      // CLAVE: Usamos el layout de tabla anidada para consistencia visual (bordes, padding, etc.).
+      layout: getNestedTableLayout(),
     };
 
     // La celda contenedora abarca las 2 columnas de la tabla principal.

@@ -106,7 +106,15 @@ export class CellContentBuilder {
     // Esto le indica a pdfmake que renderice las partes de forma contigua.
     const finalContent = { text: parsedContent };
 
-    // El stack se usa para el alineamiento vertical dentro de la celda.
-    return { stack: [finalContent], style };
+    // TRUCO para centrado vertical: Envolver el contenido en una estructura de 'columns'
+    // con una sola columna. Es una peculiaridad de pdfmake que esto centre
+    // verticalmente el contenido dentro de una celda de tabla que es más alta que su contenido.
+    return {
+      // Aplicamos el estilo a la celda para que tome propiedades como fillColor y alignment.
+      style: style,
+      // Usamos el truco de 'columns' para el centrado vertical. El contenido dentro
+      // de la columna heredará las propiedades de texto (como alignment) del estilo de la celda.
+      columns: [finalContent],
+    };
   }
 }

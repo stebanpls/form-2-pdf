@@ -15,7 +15,18 @@ export interface GroupCell extends TableCellProperties {
   table: ContentTable['table'];
 }
 
-const CELL_VERTICAL_PADDING = 8;
+// --- Padding Constants ---
+
+/**
+ * Padding vertical para las celdas.
+ * Se exporta para que los builders puedan crear layouts consistentes.
+ */
+export const CELL_VERTICAL_PADDING = 8;
+
+/**
+ * Padding horizontal para las celdas.
+ * Se exporta porque otros builders lo necesitan para calcular márgenes negativos.
+ */
 export const CELL_HORIZONTAL_PADDING = 8;
 
 export const COLORS = {
@@ -31,8 +42,6 @@ export const STYLES = {
   LABEL: 'label',
   ANSWER: 'answer',
   TABLE_HEADER: 'tableHeader',
-  TABLE_ANSWER: 'tableAnswer',
-  TABLE_TITLE: 'tableTitle',
   SECTION_HEADER: 'sectionHeader',
   DETAILED_CHOICE_LABEL: 'detailedChoiceLabel',
   FIELD_VALUE: 'fieldValue',
@@ -59,7 +68,6 @@ export function getPdfStyles(): { [key: string]: Style } {
       fontSize: 10,
       alignment: 'justify',
       margin: [0, 0, 0, 0], // El padding horizontal ahora se maneja en el layout de la tabla.
-      fillColor: 'red',
     },
     [STYLES.TABLE_HEADER]: {
       bold: true,
@@ -67,17 +75,6 @@ export function getPdfStyles(): { [key: string]: Style } {
       color: COLORS.LABEL_TEXT,
       fillColor: COLORS.LABEL_BACKGROUND,
       alignment: 'center',
-    },
-    [STYLES.TABLE_ANSWER]: {
-      fontSize: 9,
-      color: '#333333',
-      alignment: 'justify',
-    },
-    [STYLES.TABLE_TITLE]: {
-      fontSize: 11,
-      bold: true,
-      margin: [0, 15, 0, 5],
-      color: '#1a237e',
     },
     [STYLES.SECTION_HEADER]: {
       bold: true,
@@ -157,14 +154,12 @@ export function getNestedTableLayout(): TableLayout {
   return {
     // Sin líneas horizontales dentro del grupo.
     hLineWidth: () => 0,
-    // Dibuja líneas verticales solo ANTES de una nueva etiqueta,
-    // es decir, entre los pares de etiqueta/valor.
+    // Dibuja líneas verticales entre todas las columnas internas.
     vLineWidth: (i: number, node: ContentTable) => {
       // No dibujar línea al principio ni al final.
       if (i === 0 || i === node.table.widths!.length) return 0;
-      // Dibujar línea solo si el índice de la columna es par (0, 2, 4...),
-      // que es donde empieza cada nuevo par de etiqueta/valor.
-      return i % 2 === 0 ? 0.5 : 0;
+      // Dibujar una línea de 0.5 de grosor para todas las demás.
+      return 0.5;
     },
     hLineColor: () => COLORS.BORDER,
     vLineColor: () => COLORS.BORDER,

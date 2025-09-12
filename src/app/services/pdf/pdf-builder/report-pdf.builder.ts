@@ -24,19 +24,8 @@ export class ReportPdfBuilder {
   }
 
   public build(rawData: ReportData, allFields: FormField[]): TDocumentDefinitions {
-    const fieldsWithGenerated = [...allFields];
-    // Añadimos manualmente un FormField para 'generationDate' para que pueda ser procesado.
-    if (rawData['generationDate'] && !allFields.some((f) => f.id === 'generationDate')) {
-      fieldsWithGenerated.push({
-        id: 'generationDate',
-        label: 'Fecha de Elaboración',
-        type: 'text',
-        order: 2.5, // Lo ubicamos entre 'projectManager' y 'projectDescription'
-      });
-    }
-    fieldsWithGenerated.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-    const sectionsContent = this._buildSectionsContent(rawData, fieldsWithGenerated);
+    const sortedFields = [...allFields].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const sectionsContent = this._buildSectionsContent(rawData, sortedFields);
 
     return {
       pageSize: 'LETTER',

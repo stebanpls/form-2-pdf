@@ -33,7 +33,12 @@ export class ReportCrudService {
     }
 
     isLoading.set(true);
-    const cleanData = this._prepareDataForSave(form.getRawValue(), formFields);
+    const rawData = form.getRawValue();
+
+    // Asignamos la fecha de elaboración solo al crear un nuevo reporte.
+    rawData['generationDate'] = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+
+    const cleanData = this._prepareDataForSave(rawData, formFields);
     try {
       const docRef = await this.reportDataService.addReport(cleanData);
       console.log('Documento guardado en Firestore con ID: ', docRef.id);
