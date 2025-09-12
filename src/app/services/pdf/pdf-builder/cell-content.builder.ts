@@ -1,13 +1,15 @@
 import { FormField, ReportData } from '../../../models/report.model';
 import htmlToPdfmake from 'html-to-pdfmake';
-import { STYLES } from './pdf-report.config';
+import { getPdfStyles, STYLES } from './pdf-report.config';
 import { formatDate } from '@angular/common';
+import { Style } from 'pdfmake/interfaces';
 
 /**
  * Construye el contenido de una celda individual para el reporte PDF.
  * Se encarga de obtener el valor, aplicar el estilo y convertir HTML a pdfmake.
  */
 export class CellContentBuilder {
+  private readonly pdfStyles = getPdfStyles();
   constructor(private rawData: ReportData) {}
 
   private unescapeHtml(safeHtml: string): string {
@@ -37,15 +39,6 @@ export class CellContentBuilder {
     });
   }
 
-  private _buildEmptyValueCell(): any {
-    return {
-      text: '(No se diligenció)',
-      style: STYLES.ANSWER,
-      italics: true,
-      color: 'gray',
-    };
-  }
-
   /**
    * Crea el contenido de una celda.
    * @param field El campo del formulario para la celda.
@@ -53,36 +46,60 @@ export class CellContentBuilder {
    * @returns El objeto de contenido de celda para pdfmake.
    */
   public build(field: FormField, isLabel: boolean): any {
-    if (!isLabel) {
-      const rawValue = this.rawData[field.id];
-      const valueIsEmpty = rawValue === null || rawValue === undefined || rawValue === '';
-      if (valueIsEmpty) {
-        return this._buildEmptyValueCell();
-      }
+    let content: any;
+    let styleObject: Style;
+
+    if (!isLabel && this._isFieldEmpty(field)) {
+      content = this._getEmptyValueContent();
+      // Usamos el estilo base de 'ANSWER' pero nos aseguramos de que no tenga color de fondo.
+      styleObject = { ...this.pdfStyles[STYLES.ANSWER], fillColor: undefined };
+    } else {
+      content = this._getContentForField(field, isLabel);
+      const styleName = isLabel ? STYLES.LABEL : STYLES.ANSWER;
+      styleObject = this.pdfStyles[styleName];
     }
 
-    let content = isLabel ? field.label : (this.rawData[field.id] || '').toString();
-    const style = isLabel ? STYLES.LABEL : STYLES.ANSWER;
+    // Ahora, todas las celdas (vacías o no) pasan por el mismo constructor final.
+    return this._buildVerticallyCenteredCell(content, styleObject);
+  }
 
-    // 1. Pre-procesamiento para valores de campo
+  /** Comprueba si el valor de un campo está vacío, nulo o indefinido. */
+  private _isFieldEmpty(field: FormField): boolean {
+    const rawValue = this.rawData[field.id];
+    return rawValue === null || rawValue === undefined || rawValue === '';
+  }
+
+  /** Genera el objeto de contenido para una celda de valor vacío. */
+  private _getEmptyValueContent(): any {
+    return {
+      text: '(No se diligenció)',
+      italics: true,
+      color: 'gray',
+    };
+  }
+
+  /** Obtiene, formatea y convierte el contenido de un campo a la estructura de pdfmake. */
+  private _getContentForField(field: FormField, isLabel: boolean): any {
+    let content = isLabel ? field.label : (this.rawData[field.id] || '').toString();
+
+    // Pre-procesamiento
     if (!isLabel && typeof content === 'string') {
       content = this.unescapeHtml(content);
       content = this.breakLongWords(content);
     }
 
-    // 2. Formateo específico por tipo
+    // Formateo específico por tipo
     if (!isLabel && field.type === 'date' && content) {
       const isIsoDate = /^\d{4}-\d{2}-\d{2}/.test(content);
       if (isIsoDate) {
         content = formatDate(content, 'dd/MM/yyyy', 'es-CO', 'UTC');
       }
     }
-
     if (field.type === 'textarea') {
       content = content.replace(/\n/g, '<br>');
     }
 
-    // 3. Conversión final a la estructura de pdfmake
+    // Conversión de HTML a la estructura de pdfmake
     const parsedContent = htmlToPdfmake(`<div>${content}</div>`, {
       removeExtraBlanks: true,
       defaultStyles: {
@@ -94,27 +111,52 @@ export class CellContentBuilder {
         em: { italics: true },
         small: { fontSize: 8 },
         big: { fontSize: 12 },
-        // Dejamos que html-to-pdfmake maneje las etiquetas <sub> y <sup>.
-        // Esto creará un array de partes de texto.
         sub: { sub: true, fontSize: 8 },
         sup: { sup: true, fontSize: 8 },
       },
     });
 
-    // CLAVE: Para arreglar el espaciado alrededor de <sub> y <sup>, envolvemos
-    // el array generado por htmlToPdfmake dentro de un objeto { text: [...] }.
-    // Esto le indica a pdfmake que renderice las partes de forma contigua.
-    const finalContent = { text: parsedContent };
+    return { text: parsedContent };
+  }
 
-    // TRUCO para centrado vertical: Envolver el contenido en una estructura de 'columns'
-    // con una sola columna. Es una peculiaridad de pdfmake que esto centre
-    // verticalmente el contenido dentro de una celda de tabla que es más alta que su contenido.
+  /**
+   * Construye la estructura final de la celda usando el truco de la "tabla invisible"
+   * para forzar el centrado vertical de manera consistente.
+   * @param content El objeto de contenido de texto a centrar.
+   * @param styleObject El objeto de estilo completo para la celda.
+   */
+  private _buildVerticallyCenteredCell(content: any, styleObject: Style): any {
+    // Creamos un estilo solo para el texto, quitando las propiedades que son de la celda.
+    const textStyle: Style = { ...styleObject };
+    delete textStyle.fillColor;
+
     return {
-      // Aplicamos el estilo a la celda para que tome propiedades como fillColor y alignment.
-      style: style,
-      // Usamos el truco de 'columns' para el centrado vertical. El contenido dentro
-      // de la columna heredará las propiedades de texto (como alignment) del estilo de la celda.
-      columns: [finalContent],
+      // 1. Propiedades de la celda exterior (color de fondo).
+      fillColor: styleObject.fillColor,
+
+      // 2. Contenido: una tabla invisible que fuerza el centrado vertical.
+      table: {
+        // 3. La clave: dos filas flexibles ('*') y una de contenido ('auto').
+        heights: ['*', 'auto', '*'],
+        body: [
+          // Fila superior (espaciador)
+          [{ text: '', border: [false, false, false, false] }],
+          // Fila del medio (nuestro contenido real)
+          [{ ...content, ...textStyle, border: [false, false, false, false] }],
+          // Fila inferior (espaciador)
+          [{ text: '', border: [false, false, false, false] }],
+        ],
+      },
+      // 4. El layout de la tabla anidada no debe tener bordes ni padding propio,
+      // para que se fusione perfectamente con la celda exterior.
+      layout: {
+        hLineWidth: () => 0,
+        vLineWidth: () => 0,
+        paddingLeft: () => 0,
+        paddingRight: () => 0,
+        paddingTop: () => 0,
+        paddingBottom: () => 0,
+      },
     };
   }
 }

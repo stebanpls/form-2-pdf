@@ -12,7 +12,7 @@ import { ISectionBuilder } from './isection.builder';
 import { PdfReportTableBodyBuilder } from '../pdf-report-table-body.builder';
 import { CellContentBuilder } from '../cell-content.builder';
 
-const HEADER_FIELD_IDS = ['projectName', 'projectManager', 'generationDate'];
+const HEADER_FIELD_IDS = ['projectName', 'projectManager', 'generationDate', 'deliveryDate'];
 
 export class StandardSectionBuilder implements ISectionBuilder {
   // Este builder manejará cualquier sección que no sea de un tipo especial.
