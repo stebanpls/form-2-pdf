@@ -12,8 +12,6 @@ import { ISectionBuilder } from './isection.builder';
 import { PdfReportTableBodyBuilder } from '../pdf-report-table-body.builder';
 import { CellContentBuilder } from '../cell-content.builder';
 
-const HEADER_FIELD_IDS = ['projectName', 'projectManager', 'generationDate', 'deliveryDate'];
-
 export class StandardSectionBuilder implements ISectionBuilder {
   // Este builder manejará cualquier sección que no sea de un tipo especial.
   canHandle(_section: FormSection): boolean {
@@ -21,16 +19,18 @@ export class StandardSectionBuilder implements ISectionBuilder {
   }
 
   build(section: FormSection, rawData: ReportData): Content {
-    // Separamos los campos del encabezado de los campos del cuerpo de la sección.
-    const headerFields = section.fields.filter((f) => HEADER_FIELD_IDS.includes(f.id));
+    // Separamos los campos de metadatos (que van en una fila especial) del resto.
+    // Esto se controla con la propiedad 'layoutHint: 'metadata'' en la definición del formulario.
+    const metadataFields = section.fields.filter((f) => f.layoutHint?.group === 'metadata');
     const bodyFields = section.fields.filter(
       (f) =>
-        !HEADER_FIELD_IDS.includes(f.id) &&
+        // Excluimos los campos que ya hemos identificado como metadatos.
+        f.layoutHint?.group !== 'metadata' &&
         f.type !== 'dynamic_table' &&
         f.type !== 'detailed_multiple_choice'
     );
 
-    if (headerFields.length === 0 && bodyFields.length === 0) {
+    if (metadataFields.length === 0 && bodyFields.length === 0) {
       return []; // No hay nada que renderizar en esta sección.
     }
 
@@ -51,9 +51,22 @@ export class StandardSectionBuilder implements ISectionBuilder {
       ]);
     }
 
-    // Si hay campos de encabezado, los añadimos como una fila especial anidada.
-    if (headerFields.length > 0) {
-      sectionTableBody.push(this._createHeaderRow(headerFields, rawData));
+    // Si hay campos de metadatos, los añadimos como una fila especial anidada.
+    if (metadataFields.length > 0) {
+      // Agrupamos los campos de metadatos por su 'subgroup'.
+      const metadataSubgroups = metadataFields.reduce((acc, field) => {
+        const subgroupIndex = field.layoutHint!.subgroup;
+        if (!acc[subgroupIndex]) acc[subgroupIndex] = [];
+        acc[subgroupIndex].push(field);
+        return acc;
+      }, {} as { [key: number]: FormField[] });
+
+      // Creamos una fila de metadatos por cada subgrupo, ordenado numéricamente.
+      Object.keys(metadataSubgroups)
+        .sort()
+        .forEach((key) => {
+          sectionTableBody.push(this._createMetadataRow(metadataSubgroups[Number(key)], rawData));
+        });
     }
 
     // Añadimos las filas de campos que generamos.
@@ -74,11 +87,11 @@ export class StandardSectionBuilder implements ISectionBuilder {
   }
 
   /**
-   * Crea una fila especial para los metadatos del encabezado.
+   * Crea una fila especial para los metadatos.
    * Esta fila contiene una tabla anidada para permitir un layout de múltiples columnas
    * que se expande para llenar el ancho completo.
    */
-  private _createHeaderRow(fields: FormField[], rawData: ReportData): any[] {
+  private _createMetadataRow(fields: FormField[], rawData: ReportData): any[] {
     const cellBuilder = new CellContentBuilder(rawData);
     // Cada par de etiqueta/valor necesita su propio ancho 'auto' y '*'.
     const widths = fields.flatMap(() => ['auto', '*']);

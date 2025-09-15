@@ -18,6 +18,12 @@ export interface FormField {
   required?: boolean;
   sectionTitle?: string;
 
+  // Pista para el layout, para dar un tratamiento especial a ciertos campos.
+  layoutHint?: {
+    group: 'metadata';
+    subgroup: number;
+  };
+
   // Esta propiedad se usa SOLO cuando el tipo es 'dynamic_table'.
   // Es un ARRAY de objetos FormField, donde cada objeto define una columna.
   fields?: FormField[];
