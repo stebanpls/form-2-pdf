@@ -37,12 +37,11 @@ export class CellContentBuilder {
       const longWordRegex = new RegExp(`([^\\s]{${WORD_BREAK_THRESHOLD},})`, 'g');
 
       return text.replace(longWordRegex, (longWord: string) => {
-        // La estrategia "inteligente" de romper URLs solo en delimitadores no era suficiente
-        // para URLs con parámetros de consulta muy largos y sin delimitadores.
-        // La solución más robusta es romper CUALQUIER palabra larga (incluyendo URLs)
-        // de forma agresiva, insertando un espacio de ancho cero entre cada carácter.
-        // Esto le da a pdfmake la máxima flexibilidad para ajustar la línea donde sea
-        // necesario, solucionando el problema de desbordamiento de forma definitiva.
+        // La única forma de garantizar que el texto no se desborde es insertar
+        // caracteres de ruptura (ZWSP). Esto se aplica a TODAS las palabras largas,
+        // incluyendo URLs. Esto soluciona el problema visual, pero reintroduce el
+        // problema de que los espacios aparecen al copiar y pegar la URL.
+        // Priorizamos la apariencia visual del documento.
         return longWord.split('').join(ZWSP);
       });
     };
@@ -71,16 +70,29 @@ export class CellContentBuilder {
       return '';
     }
 
+    // Regex para enlaces estilo Markdown: [texto](url)
+    // Captura el texto y la URL.
+    const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+
+    // Regex para URLs en texto plano.
     const urlRegex = /(\bhttps?:\/\/[^\s<]+)/g;
 
-    // Divide el texto por las etiquetas <a> existentes para procesar solo el texto fuera de ellas.
-    const parts = text.split(/(<a\b[^>]*>.*?<\/a>)/gi);
+    // 1. Convierte los enlaces estilo Markdown a etiquetas <a> HTML.
+    // Ejemplo: [Google](https://google.com) -> <a href="https://google.com">Google</a>
+    let processedText = text.replace(markdownLinkRegex, '<a href="$2">$1</a>');
+
+    // 2. Procesa el texto restante para URLs en texto plano, con cuidado de no volver a procesar
+    //    las etiquetas <a> que ya existen (las que acabamos de crear o las que ya venían en el HTML).
+    const parts = processedText.split(/(<a\b[^>]*>.*?<\/a>)/gi);
 
     return parts
       .map((part) => {
         // Si el fragmento es una etiqueta <a> existente, la deja intacta.
-        if (part.match(/^<a\b/i)) return part;
-        // De lo contrario, busca y envuelve las URLs de texto sin formato.
+        if (part.match(/^<a\b/i)) {
+          return part;
+        }
+        // De lo contrario, busca y envuelve las URLs de texto plano.
+        // Ejemplo: https://google.com -> <a href="https://google.com">https://google.com</a>
         return part.replace(urlRegex, '<a href="$&">$&</a>');
       })
       .join('');
@@ -208,6 +220,11 @@ export class CellContentBuilder {
       // 2. Contenido: una tabla invisible que fuerza el centrado vertical.
       table: {
         // 3. La clave: dos filas flexibles ('*') y una de contenido ('auto').
+        // --- LA CORRECCIÓN ---
+        // Sin esto, la tabla interna intenta calcular su propio ancho basado en el contenido,
+        // lo que puede hacer que se desborde de la celda padre si el contenido es muy largo.
+        // Con ['*'], forzamos a la tabla interna a ocupar el 100% del ancho disponible de la celda padre.
+        widths: ['*'],
         heights: ['*', 'auto', '*'],
         body: [
           // Fila superior (espaciador)

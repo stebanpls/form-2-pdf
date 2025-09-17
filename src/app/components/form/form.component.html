@@ -50,6 +50,7 @@
 <!-- PDF Preview Modal -->
 @if (pdfStateService.safePdfPreviewUrl(); as url) {
 <app-pdf-preview-modal
+  [title]="reportTitle() + '.pdf'"
   [url]="url"
   (close)="onClosePreview()"
   (download)="onDownloadPdf()"
