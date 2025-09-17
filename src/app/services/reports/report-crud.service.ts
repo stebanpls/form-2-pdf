@@ -41,7 +41,6 @@ export class ReportCrudService {
     const cleanData = this._prepareDataForSave(rawData, formFields);
     try {
       const docRef = await this.reportDataService.addReport(cleanData);
-      console.log('Documento guardado en Firestore con ID: ', docRef.id);
       return { success: true };
     } catch (e) {
       console.error('Error al guardar en Firestore: ', e);
@@ -64,7 +63,6 @@ export class ReportCrudService {
     const cleanData = this._prepareDataForSave(form.getRawValue(), formFields);
     try {
       await this.reportDataService.updateReport(id, cleanData);
-      console.log('Documento actualizado en Firestore con ID: ', id);
       return { success: true };
     } catch (e) {
       console.error('Error al actualizar en Firestore: ', e);
@@ -78,7 +76,6 @@ export class ReportCrudService {
     isLoading.set(true);
     try {
       await this.reportDataService.deleteReport(id);
-      console.log('Documento eliminado de Firestore con ID: ', id);
       return { success: true };
     } catch (e) {
       console.error('Error al eliminar de Firestore: ', e);

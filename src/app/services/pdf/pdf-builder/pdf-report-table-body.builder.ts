@@ -92,7 +92,7 @@ export class PdfReportTableBodyBuilder {
    * Cada fila abarca todo el ancho de la tabla principal.
    */
   private _createRowsForTextArea(field: FormField): any[][] {
-    const labelCell = this.cellBuilder.build(field, true);
+    const labelCell = this.cellBuilder.build(field, true, { isFullWidth: true });
     const valueCell = this.cellBuilder.build(field, false);
 
     // La fila de la etiqueta: una celda que abarca dos columnas, más un placeholder.

@@ -24,28 +24,88 @@ export class CellContentBuilder {
    * @param text El texto a procesar.
    * @returns El texto con los cortes de palabra insertados.
    */
-  private breakLongWords(text: string): string {
+  private breakLongWords(html: string): string {
     const WORD_BREAK_THRESHOLD = 35;
     const ZWSP = '\u200B'; // Zero-Width Space
 
-    // Esta regex encuentra secuencias de caracteres sin espacios que excedan el umbral.
-    // Ignora el contenido dentro de las etiquetas HTML (como <br>) para no romperlas.
-    const longWordRegex = new RegExp(`([^\\s<>]{${WORD_BREAK_THRESHOLD},})`, 'g');
+    // Esta regex divide el string por etiquetas HTML, manteniéndolas en el array resultante.
+    // Esto nos permite procesar únicamente el contenido de texto que está entre las etiquetas.
+    const parts = html.split(/(<[^>]+>)/g);
 
-    return text.replace(longWordRegex, (longWord: string) => {
-      // Inserta un ZWSP entre cada caracter de la palabra larga.
-      // Esto le da a pdfmake máxima flexibilidad para el corte de línea.
-      return longWord.split('').join(ZWSP);
-    });
+    const breakText = (text: string) => {
+      // Esta regex encuentra secuencias largas de caracteres que no son espacios.
+      const longWordRegex = new RegExp(`([^\\s]{${WORD_BREAK_THRESHOLD},})`, 'g');
+
+      return text.replace(longWordRegex, (longWord: string) => {
+        // La estrategia "inteligente" de romper URLs solo en delimitadores no era suficiente
+        // para URLs con parámetros de consulta muy largos y sin delimitadores.
+        // La solución más robusta es romper CUALQUIER palabra larga (incluyendo URLs)
+        // de forma agresiva, insertando un espacio de ancho cero entre cada carácter.
+        // Esto le da a pdfmake la máxima flexibilidad para ajustar la línea donde sea
+        // necesario, solucionando el problema de desbordamiento de forma definitiva.
+        return longWord.split('').join(ZWSP);
+      });
+    };
+
+    // Reconstruimos el string procesando solo las partes que no son etiquetas.
+    return parts
+      .map((part) => {
+        // Si una parte parece una etiqueta HTML, la dejamos intacta para no corromper atributos como 'href'.
+        if (part.startsWith('<') && part.endsWith('>')) {
+          return part;
+        }
+        // De lo contrario, es contenido de texto y es seguro procesarlo para cortar palabras.
+        return breakText(part);
+      })
+      .join('');
+  }
+
+  /**
+   * Envuelve las URL de texto sin formato en etiquetas <a> para que puedan ser estilizadas.
+   * Es cuidadoso de no envolver URLs que ya están dentro de una etiqueta <a>.
+   * @param text El texto a procesar.
+   * @returns El texto con las URLs envueltas en etiquetas <a>.
+   */
+  private linkify(text: string): string {
+    if (!text) {
+      return '';
+    }
+
+    const urlRegex = /(\bhttps?:\/\/[^\s<]+)/g;
+
+    // Divide el texto por las etiquetas <a> existentes para procesar solo el texto fuera de ellas.
+    const parts = text.split(/(<a\b[^>]*>.*?<\/a>)/gi);
+
+    return parts
+      .map((part) => {
+        // Si el fragmento es una etiqueta <a> existente, la deja intacta.
+        if (part.match(/^<a\b/i)) return part;
+        // De lo contrario, busca y envuelve las URLs de texto sin formato.
+        return part.replace(urlRegex, '<a href="$&">$&</a>');
+      })
+      .join('');
   }
 
   /**
    * Crea el contenido de una celda.
    * @param field El campo del formulario para la celda.
    * @param isLabel Si la celda es para la etiqueta o para el valor.
+   * @param options Opciones adicionales para la construcción de la celda.
    * @returns El objeto de contenido de celda para pdfmake.
    */
-  public build(field: FormField, isLabel: boolean): any {
+  public build(field: FormField, isLabel: boolean, options?: { isFullWidth?: boolean }): any {
+    // --- SOLUCIÓN DIRECTA PARA ETIQUETAS DE ANCHO COMPLETO ---
+    // Si es una etiqueta que debe ocupar toda la fila, usamos una ruta de construcción más simple
+    // para asegurar que el centrado horizontal funcione correctamente.
+    // Esto evita la complejidad de la tabla de centrado vertical que parece estar causando conflictos.
+    if (isLabel && options?.isFullWidth) {
+      const content = this._getContentForField(field, true);
+      const style = { ...this.pdfStyles[STYLES.LABEL], alignment: 'center' };
+      // Se retorna un objeto de celda simple, sin el centrado vertical.
+      return { ...content, ...style };
+    }
+
+    // --- RUTA NORMAL PARA TODAS LAS DEMÁS CELDAS (CON CENTRADO VERTICAL) ---
     let content: any;
     let styleObject: Style;
 
@@ -56,7 +116,7 @@ export class CellContentBuilder {
     } else {
       content = this._getContentForField(field, isLabel);
       const styleName = isLabel ? STYLES.LABEL : STYLES.ANSWER;
-      styleObject = this.pdfStyles[styleName];
+      styleObject = { ...this.pdfStyles[styleName] };
     }
 
     // Ahora, todas las celdas (vacías o no) pasan por el mismo constructor final.
@@ -85,6 +145,8 @@ export class CellContentBuilder {
     // Pre-procesamiento
     if (!isLabel && typeof content === 'string') {
       content = this.unescapeHtml(content);
+      // Envuelve las URLs de texto plano en etiquetas <a> para que html-to-pdfmake las reconozca.
+      content = this.linkify(content);
       content = this.breakLongWords(content);
     }
 
@@ -100,7 +162,11 @@ export class CellContentBuilder {
     }
 
     // Conversión de HTML a la estructura de pdfmake
-    const parsedContent = htmlToPdfmake(`<div>${content}</div>`, {
+    // CLAVE: Usamos <span> en lugar de <div>. Un <div> es un elemento de bloque y
+    // la librería html-to-pdfmake puede asignarle un estilo de bloque por defecto
+    // (con alineación a la izquierda) que sobrescribe la alineación de la celda.
+    // Un <span> es un elemento en línea y no sufre de este problema.
+    const parsedContent = htmlToPdfmake(`<span>${content}</span>`, {
       removeExtraBlanks: true,
       defaultStyles: {
         b: { bold: true },
@@ -113,6 +179,11 @@ export class CellContentBuilder {
         big: { fontSize: 12 },
         sub: { sub: true, fontSize: 8 },
         sup: { sup: true, fontSize: 8 },
+        a: {
+          // Estilo para los hipervínculos
+          color: '#108092',
+          decoration: 'underline',
+        },
       },
     });
 
