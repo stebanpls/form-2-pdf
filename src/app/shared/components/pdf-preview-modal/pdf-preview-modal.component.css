@@ -17,7 +17,8 @@
 }
 
 .preview-container {
-  background-color: white;
+  /* Se elimina el fondo blanco para evitar que se vea en los bordes por anti-aliasing. */
+  /* Los hijos (.preview-header y .iframe-frame) ya tienen su propio fondo. */
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   width: 95%;
@@ -25,22 +26,38 @@
   max-width: 1000px;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Evita artefactos blancos en los bordes y desbordamiento de hijos */
+}
+
+/* Estilos para el modo de pantalla completa */
+.preview-container.fullscreen {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  border-radius: 0;
 }
 
 .preview-header {
   display: flex;
   justify-content: space-between;
+  /* Volvemos a 'center' que es más robusto para centrar verticalmente los elementos completos (título y botones). */
   align-items: center;
-  padding: 0.75rem 1.5rem;
+  /* Ajustamos el padding vertical para que sea simétrico y dé el espaciado correcto. */
+  padding: 10px 1.5rem;
   background: linear-gradient(90deg, var(--header-bg-start), var(--header-bg-end));
   color: var(--text-light);
   border-radius: 8px 8px 0px 0px;
   flex-shrink: 0;
-  /* Quitamos la altura fija para que pueda crecer si el contenido se envuelve */
+  overflow: hidden; /* Evita que el contenido se desborde en zoom alto */
 }
 
 .preview-header h3 {
   margin: 0;
+  /* Sin padding vertical en el título. El espaciado lo controla el padding del header. */
+  /* Se añade un padding vertical calculado para que la altura total de la caja del título
+     coincida con la altura de los botones, logrando un centrado visual perfecto. */
+  padding: 5px 0;
+  line-height: 1.2;
   font-size: 1rem;
   font-weight: normal;
   /* Evita que el título se rompa y empuje los botones hacia abajo */
@@ -64,10 +81,23 @@
   padding: 6px 12px;
 }
 
-.btn-icon-text .icon {
+/* Estilos para botones que solo tienen un icono */
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Se unifica el padding vertical con los botones de texto para tener una altura consistente. */
+  padding: 8px; /* Hacemos el padding un poco más grande para que el área de clic sea cómoda */
+  /* Se define un border-radius específico para que no se vea circular, sino como un cuadrado con bordes suaves. */
+  border-radius: 6px;
+}
+
+.btn-icon-text .icon,
+.btn-icon .icon {
   width: 18px;
   height: 18px;
   fill: currentColor;
+  flex-shrink: 0; /* Evita que el icono se encoja */
 }
 
 /* --- Botones estilo "Fantasma" (sin fondo) --- */
@@ -92,9 +122,26 @@
   }
 }
 
+/* Marco para el Iframe con el mismo gradiente de la cabecera */
+.iframe-frame {
+  /* Se elimina el padding superior, ya que el header ya cumple esa función visual.
+     Esto evita el doble borde y soluciona el problema de escalado en la parte superior. */
+  /* Reducimos el padding para que el marco sea un poco más sutil y su escalado con el zoom no sea tan pronunciado. */
+  padding: 0 6px 6px 6px;
+  background: linear-gradient(90deg, var(--header-bg-start), var(--header-bg-end));
+  flex-grow: 1; /* Ocupa el espacio vertical restante */
+  display: flex; /* Permite que el iframe hijo crezca */
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  overflow: hidden; /* Asegura que el iframe no se desborde de las esquinas redondeadas del marco */
+  min-height: 0; /* Permite que el marco se encoja verticalmente en flexbox */
+}
+
 .preview-container iframe {
   flex-grow: 1;
   border: none;
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
+  /* Los bordes redondeados ahora los tiene el marco.
+     Le damos un borde más pequeño al iframe para que se vea bien dentro del marco. */
+  border-radius: 4px;
+  min-width: 0; /* Permite que el iframe se encoja horizontalmente en flexbox */
 }

@@ -8,7 +8,7 @@ import {
   AbstractControl,
 } from '@angular/forms';
 import { ReportDataService } from '../reports/report-data.service';
-import { FormField, FormFieldOption } from '../../models/report.model';
+import { FormField, FormFieldOption, HeaderConfig } from '../../models/report.model';
 import { from } from 'rxjs';
 
 @Injectable()
@@ -20,12 +20,14 @@ export class DynamicFormService {
     form: FormGroup<{ [key: string]: any }>;
     fields: FormField[];
     title: string;
+    headerConfig?: HeaderConfig;
   }> {
     const docSnap = await this.dataService.getFormDefinition();
 
     if (docSnap.exists()) {
       const data = docSnap.data(); // Safe access
       const title = (data?.['title'] as string) || 'Reporte PDF'; // Extraemos el título
+      const headerConfig = data?.['headerConfig'] as HeaderConfig | undefined;
       const fields = ((data?.['fields'] as FormField[]) ?? []).sort(
         // Use the variable and provide a fallback
         (a, b) => (a.order ?? 0) - (b.order ?? 0)
@@ -37,7 +39,7 @@ export class DynamicFormService {
       }
 
       const form = this.fb.group(formGroupConfig);
-      return { form, fields, title };
+      return { form, fields, title, headerConfig };
     } else {
       // It's better to reject the promise or throw an error if the template is not found.
       return Promise.reject('No form definition found in Firestore!');

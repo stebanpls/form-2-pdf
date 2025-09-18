@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
-import { FormField, ReportData, ReportDocument } from '../../models/report.model';
+import { FormField, HeaderConfig, ReportData, ReportDocument } from '../../models/report.model';
 import { ReportDataService } from '../../services/reports/report-data.service';
 import { DynamicFormService } from '../../services/form/dynamic-form.service';
 import { PdfStateService } from '../../services/pdf/pdf-state.service';
@@ -36,11 +36,16 @@ export class ReportsPageComponent {
     this.dynamicFormService.createForm$().pipe(
       catchError((err) => {
         console.error('Error loading form definition for PDF generation', err);
-        return of({ form: null, fields: [] as FormField[], title: 'Reporte' });
+        // Aseguramos que el objeto de fallback tenga la estructura completa
+        return of({ form: null, fields: [] as FormField[], title: 'Reporte', headerConfig: {} });
       })
     )
   );
   public readonly formFields = computed(() => this.formDefinition()?.fields ?? []);
+  // Extraemos la configuración de la cabecera de la definición del formulario
+  public readonly headerConfig = computed(
+    () => this.formDefinition()?.headerConfig as HeaderConfig | undefined
+  );
   public readonly reportTitle = computed(
     () => this.formDefinition()?.title ?? 'Reporte de Actividades'
   );
@@ -111,6 +116,7 @@ export class ReportsPageComponent {
     const result = await this.pdfStateService.generatePdfPreviewFromData(
       report.data,
       fields,
+      this.headerConfig(), // Pasamos la nueva configuración de la cabecera
       this.reportTitle(),
       this.isLoading
     );

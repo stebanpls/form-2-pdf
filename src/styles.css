@@ -3,6 +3,12 @@
   /* --- Colores Principales --- */
   --primary-color: #007bff;
   --primary-hover-color: #0056b3;
+  --secondary-color: #6c757d; /* Gris estándar para acciones secundarias */
+  --secondary-hover-color: #5a6268;
+  --success-color: #28a745;
+  --success-hover-color: #218838;
+  --warning-color: #ffc107;
+  --warning-hover-color: #ffa000;
   --danger-color: #f44336;
   --danger-hover-color: #d32f2f;
   --accent-color: #ff0095; /* Rosa para enlaces activos */
@@ -43,27 +49,43 @@ body {
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  /* Usamos una variable local para el color de fondo. */
+  background-color: var(--btn-bg);
 }
 
 .btn-primary {
-  background-color: var(--primary-color);
+  --btn-bg: var(--primary-color);
+  --btn-hover-bg: var(--primary-hover-color);
+}
+
+.btn-secondary {
+  --btn-bg: var(--secondary-color);
+  --btn-hover-bg: var(--secondary-hover-color);
+}
+
+.btn-success {
+  --btn-bg: var(--success-color);
+  --btn-hover-bg: var(--success-hover-color);
+}
+
+.btn-warning {
+  --btn-bg: var(--warning-color);
+  --btn-hover-bg: var(--warning-hover-color);
 }
 
 .btn-danger {
-  background-color: var(--danger-color);
+  --btn-bg: var(--danger-color);
+  --btn-hover-bg: var(--danger-hover-color);
 }
 
+/* Regla de hover genérica que usa la variable local --btn-hover-bg */
 .btn:hover:not(:disabled) {
-  background-color: var(--primary-hover-color);
+  background-color: var(--btn-hover-bg);
 }
 
 .btn:disabled {
   background-color: var(--disabled-color);
   cursor: not-allowed;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background-color: var(--danger-hover-color);
 }
 
 .btn-icon {

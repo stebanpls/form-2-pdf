@@ -2,7 +2,7 @@ import { computed, inject, Injectable, signal, WritableSignal } from '@angular/c
 import { FormGroup } from '@angular/forms';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { PdfGeneratorService } from './pdf-generator.service';
-import { FormField, ReportData } from '../../models/report.model';
+import { FormField, HeaderConfig, ReportData } from '../../models/report.model';
 import { ActionResult } from '../../models/action-result.model';
 import { PdfGenerationContext } from '../../models/pdf.model';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -26,6 +26,7 @@ export class PdfStateService {
   async generatePdfPreviewFromData(
     reportData: ReportData,
     formFields: FormField[],
+    headerConfig: HeaderConfig | undefined,
     defaultReportTitle: string,
     isLoading: WritableSignal<boolean>
   ): Promise<ActionResult> {
@@ -34,7 +35,7 @@ export class PdfStateService {
       const reportTitle = reportData['title'] || defaultReportTitle;
       const dataForPdf = { ...reportData, title: reportTitle };
 
-      const docDef = this.pdfGenerator.createDocDefinition(dataForPdf, formFields);
+      const docDef = this.pdfGenerator.createDocDefinition(dataForPdf, formFields, headerConfig);
       this.docDefinition.set(docDef);
 
       const url = await this.pdfGenerator.getPdfUrl(docDef);
@@ -59,6 +60,7 @@ export class PdfStateService {
     return this.generatePdfPreviewFromData(
       rawData,
       context.formFields,
+      context.headerConfig,
       context.defaultReportTitle,
       isLoading
     );

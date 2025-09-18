@@ -1,6 +1,5 @@
 import { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
-import { FormField, ReportData } from '../../../models/report.model';
-import { FormSection } from '../../../models/form.model';
+import { FormField, HeaderConfig, ReportData } from '../../../models/report.model';
 import { COLORS, getPdfStyles, STYLES } from './pdf-report.config';
 import { SectionGrouperUtil } from '../../../shared/utils/section-grouper.util';
 import { ISectionBuilder } from './section-builders/isection.builder';
@@ -23,16 +22,99 @@ export class ReportPdfBuilder {
     ];
   }
 
-  public build(rawData: ReportData, allFields: FormField[]): TDocumentDefinitions {
+  public build(
+    rawData: ReportData,
+    allFields: FormField[],
+    headerConfig?: HeaderConfig
+  ): TDocumentDefinitions {
     const sortedFields = [...allFields].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     const sectionsContent = this._buildSectionsContent(rawData, sortedFields);
 
+    // Layout de tabla para el encabezado con borde inferior, como en el ejemplo.
+    const headerLayout = {
+      // Dibuja la línea horizontal solo al final del cuerpo de la tabla.
+      hLineWidth: (i: number, node: any) => (i === node.table.body.length ? 1 : 0),
+      vLineWidth: () => 0, // No dibuja líneas verticales.
+      hLineColor: () => '#bfbfbf', // Color del borde.
+      // Padding para las celdas.
+      paddingLeft: () => 0,
+      paddingRight: () => 0,
+      paddingTop: () => 5,
+      paddingBottom: () => 5,
+    };
     return {
       pageSize: 'LETTER',
       pageOrientation: 'portrait',
-      pageMargins: [40, 60, 40, 60],
+      // Ajustamos el margen superior para dar espacio a la cabecera.
+      // El margen de la cabecera se controla por separado.
+      pageMargins: [40, 80, 40, 60], // [izquierda, arriba, derecha, abajo]
+
+      // --- INICIO DE LA NUEVA CABECERA DINÁMICA ---
+      header: (currentPage, pageCount) => {
+        // Si no hay configuración de cabecera, no se muestra nada.
+        if (!headerConfig) return null;
+
+        return {
+          table: {
+            widths: ['auto', '*', 'auto'],
+            body: [
+              [
+                // Columna 1: Código y versión (apilados)
+                {
+                  stack: [
+                    {
+                      text: headerConfig.documentCode ?? '',
+                      bold: true,
+                      fontSize: 9,
+                      margin: [0, 0, 0, 5],
+                    },
+                    { text: headerConfig.version ?? '', fontSize: 9 },
+                  ],
+                  alignment: 'left',
+                },
+                // Columna 2: Título principal (centrado)
+                {
+                  text: headerConfig.centerText ?? '',
+                  fontSize: 10,
+                  bold: true,
+                  alignment: 'center',
+                },
+                // Columna 3: Paginación y logo (apilados)
+                {
+                  stack: [
+                    {
+                      text: `Página ${currentPage} de ${pageCount}`,
+                      fontSize: 9,
+                      alignment: 'right',
+                      margin: [0, 5, 0, 0],
+                    },
+                    // El logo solo se muestra si existe en la configuración
+                    ...(headerConfig.logoBase64
+                      ? [
+                          {
+                            image: headerConfig.logoBase64,
+                            width: 70,
+                            alignment: 'right',
+                            margin: [0, 5, 0, 0],
+                          },
+                        ]
+                      : []),
+                  ],
+                  alignment: 'right',
+                },
+              ],
+            ],
+          },
+          // Usamos el layout personalizado que definimos arriba.
+          layout: headerLayout,
+          margin: [40, 20, 40, 0],
+        };
+      },
+      // --- FIN DE LA NUEVA CABECERA DINÁMICA ---
+
       content: [
-        { text: rawData['title'] || 'Reporte de Formulario', style: STYLES.HEADER },
+        // El título principal ahora está en la cabecera, por lo que este se vuelve redundante.
+        // { text: rawData['title'] || 'Reporte de Formulario', style: STYLES.HEADER },
         ...sectionsContent,
       ],
       styles: getPdfStyles(),

@@ -8,6 +8,7 @@ import {
   Output,
   SecurityContext,
   ViewChild,
+  signal,
 } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
@@ -28,6 +29,9 @@ export class PdfPreviewModalComponent {
 
   @ViewChild('pdfIframe') pdfIframe!: ElementRef<HTMLIFrameElement>;
 
+  // Signal para controlar el estado de la pantalla completa.
+  public readonly isFullscreen = signal(false);
+
   constructor(private sanitizer: DomSanitizer) {}
 
   // Stop propagation to prevent the overlay click from being triggered
@@ -45,28 +49,17 @@ export class PdfPreviewModalComponent {
       if (iframe.contentWindow) {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
-      } else {
-        this.openInNewTabAndPrint();
       }
     } catch (e) {
       console.error('Error al intentar imprimir el PDF directamente:', e);
-      this.openInNewTabAndPrint();
+      alert(
+        'No se pudo activar la impresión directamente. Por favor, use la función de impresión de su navegador o descargue el PDF.'
+      );
     }
   }
 
-  /** Abre el PDF en una nueva pestaña del navegador. */
-  onOpenInNewTab(): void {
-    const rawUrl = this.sanitizer.sanitize(SecurityContext.URL, this.url);
-    if (rawUrl) {
-      window.open(rawUrl, '_blank');
-    }
-  }
-
-  /** Muestra una alerta y abre el PDF para impresión manual como fallback. */
-  private openInNewTabAndPrint(): void {
-    alert(
-      'No se pudo activar la impresión directamente. Por favor, use la función de impresión del navegador en la nueva pestaña que se abrirá.'
-    );
-    this.onOpenInNewTab();
+  /** Cambia el estado del modo de pantalla completa. */
+  toggleFullscreen(): void {
+    this.isFullscreen.update((value) => !value);
   }
 }

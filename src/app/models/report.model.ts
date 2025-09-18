@@ -51,3 +51,13 @@ export interface ReportDocument {
   id: string;
   data: ReportData;
 }
+
+/**
+ * Define la estructura para la configuración dinámica de la cabecera del PDF desde Firestore.
+ */
+export interface HeaderConfig {
+  documentCode?: string;
+  centerText?: string;
+  logoBase64?: string;
+  version?: string;
+}

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { formatDate, registerLocaleData } from '@angular/common';
 import localeEsCO from '@angular/common/locales/es-CO';
-import { FormField, ReportData } from '../../models/report.model';
+import { FormField, HeaderConfig, ReportData } from '../../models/report.model';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { ReportPdfBuilder } from './pdf-builder/report-pdf.builder';
 
@@ -38,12 +38,16 @@ export class PdfGeneratorService {
     return pdfMake;
   }
 
-  public createDocDefinition(rawData: ReportData, formFields: FormField[]): TDocumentDefinitions {
+  public createDocDefinition(
+    rawData: ReportData,
+    formFields: FormField[],
+    headerConfig: HeaderConfig | undefined
+  ): TDocumentDefinitions {
     const generationDate = formatDate(new Date(), 'dd/MM/yyyy', 'es-CO');
     const dataWithDate = { ...rawData, generationDate };
 
     const builder = new ReportPdfBuilder();
-    const docDefinition = builder.build(dataWithDate, formFields);
+    const docDefinition = builder.build(dataWithDate, formFields, headerConfig);
 
     docDefinition.defaultStyle = {
       font: 'Arial',
