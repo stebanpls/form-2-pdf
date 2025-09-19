@@ -1,6 +1,6 @@
 import { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
 import { FormField, HeaderConfig, ReportData } from '../../../models/report.model';
-import { getMainTableLayout, getPdfStyles, STYLES } from './pdf-report.config';
+import { COLORS, getLayoutForSpecialRows, getPdfStyles, STYLES } from './pdf-report.config';
 import { SectionGrouperUtil } from '../../../shared/utils/section-grouper.util';
 import { ISectionBuilder } from './section-builders/isection.builder';
 import { DynamicTableSectionBuilder } from './section-builders/dynamic-table-section.builder';
@@ -42,62 +42,81 @@ export class ReportPdfBuilder {
         // Si no hay configuración de cabecera, no se muestra nada.
         if (!headerConfig) return null;
 
+        // Layout para la tabla anidada: solo dibuja las líneas internas (la cruz).
+        // Esto evita el efecto de "doble borde".
+        const nestedTableLayout = {
+          // Línea horizontal solo después de la primera fila.
+          hLineWidth: (i: number) => (i === 1 ? 0.5 : 0),
+          // Línea vertical solo después de la primera columna.
+          vLineWidth: (i: number) => (i === 1 ? 0.5 : 0),
+          hLineColor: () => COLORS.BORDER,
+          vLineColor: () => COLORS.BORDER,
+          // Padding interno para las celdas de la tabla anidada.
+          paddingTop: () => 4,
+          paddingBottom: () => 4,
+          paddingLeft: () => 8,
+          paddingRight: () => 8,
+        };
+
         return {
-          // Usamos una única tabla con celdas combinadas para lograr el diseño deseado.
+          // Usamos una tabla principal de una fila y tres columnas.
+          // La primera columna contiene una tabla anidada para el diseño complejo.
           table: {
-            // Anchos: 2 columnas para la info, 1 para el título, 1 para el logo.
-            widths: ['auto', 'auto', '*', 'auto'],
+            // Anchos: 35% para la info, el resto para el título, y 'auto' para el logo.
+            widths: ['30%', '*', 'auto'],
             body: [
-              // --- Primera Fila ---
               [
+                // --- Columna 1: Contiene una tabla anidada ---
                 {
-                  // Celda 1.1: Código del documento (ocupa 2 columnas).
-                  text: headerConfig.documentCode ?? '',
-                  colSpan: 2,
-                  alignment: 'center',
-                  bold: true,
-                  fontSize: 9,
+                  // CLAVE: Se marca como 'isGroup' para que el layout especial elimine el padding,
+                  // permitiendo que la tabla anidada se alinee perfectamente con los bordes.
+                  isGroup: true,
+                  table: {
+                    // Usamos '*' para que las columnas se expandan y llenen el espacio disponible dentro de la celda contenedora.
+                    widths: ['50%', '55.6%'],
+                    body: [
+                      // Fila 1 de la tabla anidada (código)
+                      [
+                        {
+                          text: headerConfig.documentCode ?? '',
+                          colSpan: 2,
+                          alignment: 'center',
+                          bold: true,
+                          fontSize: 9,
+                        },
+                        {},
+                      ],
+                      // Fila 2 de la tabla anidada (versión y página)
+                      [
+                        { text: headerConfig.version ?? '', alignment: 'center', fontSize: 9 },
+                        {
+                          text: `Página ${currentPage} de ${pageCount}`,
+                          alignment: 'center',
+                          fontSize: 9,
+                        },
+                      ],
+                    ],
+                  },
+                  layout: nestedTableLayout,
                 },
-                {}, // Placeholder para la celda 1.2
+
+                // --- Columna 2: Texto Central ---
                 {
-                  // Celda 1.3: Texto central (ocupa 2 filas).
                   text: headerConfig.centerText ?? '',
                   alignment: 'center',
                   bold: true,
                   fontSize: 10,
-                  rowSpan: 2,
                 },
-                // Celda 1.4: Logo (ocupa 2 filas).
+
+                // --- Columna 3: Logo ---
                 headerConfig.logoBase64
-                  ? {
-                      image: headerConfig.logoBase64,
-                      width: 80,
-                      alignment: 'center',
-                      rowSpan: 2,
-                    }
-                  : { text: '', rowSpan: 2 },
-              ],
-              // --- Segunda Fila ---
-              [
-                {
-                  // Celda 2.1: Versión
-                  text: headerConfig.version ?? '',
-                  alignment: 'center',
-                  fontSize: 9,
-                },
-                {
-                  // Celda 2.2: Paginación
-                  text: `Página ${currentPage} de ${pageCount}`,
-                  alignment: 'center',
-                  fontSize: 9,
-                },
-                {}, // Placeholder para la celda 2.3 (ocupada por el texto central)
-                {}, // Placeholder para la celda 2.4 (ocupada por el logo)
+                  ? { image: headerConfig.logoBase64, width: 80, alignment: 'center' }
+                  : { text: '' },
               ],
             ],
           },
-          // Usamos el mismo layout que las tablas del cuerpo para consistencia.
-          layout: getMainTableLayout(),
+          // Usamos el layout especial que sabe cómo manejar celdas con tablas anidadas.
+          layout: getLayoutForSpecialRows(),
           margin: [40, 20, 40, 0],
         };
       },
