@@ -1,6 +1,12 @@
 import { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
 import { FormField, HeaderConfig, ReportData } from '../../../models/report.model';
-import { COLORS, getLayoutForSpecialRows, getPdfStyles, STYLES } from './pdf-report.config';
+import {
+  CELL_HORIZONTAL_PADDING,
+  COLORS,
+  getLayoutForSpecialRows,
+  getPdfStyles,
+  STYLES,
+} from './pdf-report.config';
 import { SectionGrouperUtil } from '../../../shared/utils/section-grouper.util';
 import { ISectionBuilder } from './section-builders/isection.builder';
 import { DynamicTableSectionBuilder } from './section-builders/dynamic-table-section.builder';
@@ -62,8 +68,8 @@ export class ReportPdfBuilder {
           // Usamos una tabla principal de una fila y tres columnas.
           // La primera columna contiene una tabla anidada para el diseño complejo.
           table: {
-            // Anchos: 35% para la info, el resto para el título, y 'auto' para el logo.
-            widths: ['30%', '*', 'auto'],
+            // Anchos: 'auto' para la info, el resto para el título, y 'auto' para el logo.
+            widths: ['auto', '*', 'auto'],
             body: [
               [
                 // --- Columna 1: Contiene una tabla anidada ---
@@ -71,9 +77,13 @@ export class ReportPdfBuilder {
                   // CLAVE: Se marca como 'isGroup' para que el layout especial elimine el padding,
                   // permitiendo que la tabla anidada se alinee perfectamente con los bordes.
                   isGroup: true,
+                  // CLAVE: Un margen horizontal negativo contrarresta el padding que el layout
+                  // de la tabla principal aplica, forzando a la tabla anidada a ocupar todo el ancho.
+                  // Esto elimina los espacios vacíos a izquierda y derecha.
+                  margin: [-CELL_HORIZONTAL_PADDING, 0, -CELL_HORIZONTAL_PADDING, 0],
                   table: {
-                    // Usamos '*' para que las columnas se expandan y llenen el espacio disponible dentro de la celda contenedora.
-                    widths: ['50%', '55.6%'],
+                    // Usamos 'auto' para que cada columna se ajuste al ancho de su contenido, eliminando espacios vacíos.
+                    widths: ['auto', 'auto'],
                     body: [
                       // Fila 1 de la tabla anidada (código)
                       [
