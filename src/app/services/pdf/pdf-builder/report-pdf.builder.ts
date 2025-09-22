@@ -2,9 +2,10 @@ import { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
 import { FormField, HeaderConfig, ReportData } from '../../../models/report.model';
 import {
   CELL_HORIZONTAL_PADDING,
+  CELL_VERTICAL_PADDING,
   COLORS,
-  getLayoutForSpecialRows,
   getPdfStyles,
+  getMainTableLayout,
   STYLES,
 } from './pdf-report.config';
 import { SectionGrouperUtil } from '../../../shared/utils/section-grouper.util';
@@ -58,32 +59,46 @@ export class ReportPdfBuilder {
           hLineColor: () => COLORS.BORDER,
           vLineColor: () => COLORS.BORDER,
           // Padding interno para las celdas de la tabla anidada.
-          paddingTop: () => 4,
-          paddingBottom: () => 4,
-          paddingLeft: () => 8,
-          paddingRight: () => 8,
+          // CLAVE: Controlamos el padding por fila para un ajuste perfecto.
+          paddingTop: (i: number) =>
+            i === 0 ? CELL_VERTICAL_PADDING / 2 : CELL_VERTICAL_PADDING / 1.5,
+          paddingBottom: (i: number) => (i === 0 ? CELL_VERTICAL_PADDING / 1.5 : 0),
+          paddingLeft: () => CELL_HORIZONTAL_PADDING,
+          paddingRight: () => CELL_HORIZONTAL_PADDING,
+        };
+
+        // Layout personalizado para la tabla principal de la cabecera.
+        // Esto nos permite controlar el padding de forma precisa para cada columna.
+        const headerTableLayout = {
+          ...getMainTableLayout(), // Empezamos con el layout base para consistencia.
+          // Sobrescribimos las funciones de padding.
+          paddingLeft: (i: number) => {
+            // La primera columna (i=0), que contiene la tabla anidada, no necesita padding izquierdo.
+            return i === 0 ? 0 : CELL_HORIZONTAL_PADDING;
+          },
+          paddingRight: (i: number) => {
+            // Tampoco necesita padding derecho.
+            return i === 0 ? 0 : CELL_HORIZONTAL_PADDING;
+          },
+          // CLAVE: Eliminamos el padding vertical de la tabla principal.
+          // La altura de la fila será determinada por el contenido de la celda más alta (la sección 1),
+          // y el centrado de las otras celdas se forzará con una tabla anidada.
+          paddingTop: () => 0,
+          paddingBottom: () => 0,
         };
 
         return {
           // Usamos una tabla principal de una fila y tres columnas.
           // La primera columna contiene una tabla anidada para el diseño complejo.
           table: {
-            // Anchos: 'auto' para la info, el resto para el título, y 'auto' para el logo.
             widths: ['auto', '*', 'auto'],
             body: [
               [
                 // --- Columna 1: Contiene una tabla anidada ---
                 {
-                  // CLAVE: Se marca como 'isGroup' para que el layout especial elimine el padding,
-                  // permitiendo que la tabla anidada se alinee perfectamente con los bordes.
-                  isGroup: true,
-                  // CLAVE: Un margen horizontal negativo contrarresta el padding que el layout
-                  // de la tabla principal aplica, forzando a la tabla anidada a ocupar todo el ancho.
-                  // Esto elimina los espacios vacíos a izquierda y derecha.
-                  margin: [-CELL_HORIZONTAL_PADDING, 0, -CELL_HORIZONTAL_PADDING, 0],
                   table: {
-                    // Usamos 'auto' para que cada columna se ajuste al ancho de su contenido, eliminando espacios vacíos.
-                    widths: ['auto', 'auto'],
+                    // Usamos '*' para que las columnas se expandan y llenen el espacio disponible.
+                    widths: ['*', '*'],
                     body: [
                       // Fila 1 de la tabla anidada (código)
                       [
@@ -112,21 +127,55 @@ export class ReportPdfBuilder {
 
                 // --- Columna 2: Texto Central ---
                 {
-                  text: headerConfig.centerText ?? '',
-                  alignment: 'center',
-                  bold: true,
-                  fontSize: 10,
+                  // Contenido envuelto en una tabla invisible para forzar el centrado vertical.
+                  table: {
+                    widths: ['*'],
+                    heights: ['*', 'auto', '*'],
+                    body: [
+                      [{ text: '', border: [false, false, false, false] }],
+                      [
+                        {
+                          text: headerConfig.centerText ?? '',
+                          alignment: 'center',
+                          bold: true,
+                          fontSize: 10,
+                          border: [false, false, false, false],
+                        },
+                      ],
+                      [{ text: '', border: [false, false, false, false] }],
+                    ],
+                  },
+                  layout: 'noBorders',
                 },
 
                 // --- Columna 3: Logo ---
                 headerConfig.logoBase64
-                  ? { image: headerConfig.logoBase64, width: 80, alignment: 'center' }
+                  ? {
+                      // Contenido envuelto en una tabla invisible para forzar el centrado vertical.
+                      table: {
+                        widths: ['*'],
+                        heights: ['*', 'auto', '*'],
+                        body: [
+                          [{ text: '', border: [false, false, false, false] }],
+                          [
+                            {
+                              image: headerConfig.logoBase64,
+                              width: 80,
+                              alignment: 'center',
+                              border: [false, false, false, false],
+                            },
+                          ],
+                          [{ text: '', border: [false, false, false, false] }],
+                        ],
+                      },
+                      layout: 'noBorders',
+                    }
                   : { text: '' },
               ],
             ],
           },
-          // Usamos el layout especial que sabe cómo manejar celdas con tablas anidadas.
-          layout: getLayoutForSpecialRows(),
+          // Usamos nuestro layout personalizado para la cabecera.
+          layout: headerTableLayout,
           margin: [40, 20, 40, 0],
         };
       },
