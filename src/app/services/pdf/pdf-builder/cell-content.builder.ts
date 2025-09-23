@@ -70,19 +70,25 @@ export class CellContentBuilder {
       return '';
     }
 
-    // Regex para enlaces estilo Markdown: [texto](url)
-    // Captura el texto y la URL.
-    const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+    // Regex para enlaces web estilo Markdown: [texto](url)
+    const markdownWebLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+
+    // Regex para enlaces de email estilo Markdown: [texto](email)
+    const markdownEmailLinkRegex = /\[([^\]]+)\]\(([^@\s\)]+@[^@\s\)]+)\)/g;
 
     // Regex para URLs en texto plano.
     const urlRegex = /(\bhttps?:\/\/[^\s<]+)/g;
 
-    // 1. Convierte los enlaces estilo Markdown a etiquetas <a> HTML.
-    // Ejemplo: [Google](https://google.com) -> <a href="https://google.com">Google</a>
-    let processedText = text.replace(markdownLinkRegex, '<a href="$2">$1</a>');
+    // Regex para emails en texto plano.
+    const emailRegex = /(\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b)/gi;
 
-    // 2. Procesa el texto restante para URLs en texto plano, con cuidado de no volver a procesar
-    //    las etiquetas <a> que ya existen (las que acabamos de crear o las que ya venían en el HTML).
+    // 1. Convierte los enlaces estilo Markdown (ambos web y email) a etiquetas <a> HTML.
+    let processedText = text
+      .replace(markdownWebLinkRegex, '<a href="$2">$1</a>')
+      .replace(markdownEmailLinkRegex, '<a href="mailto:$2">$1</a>');
+
+    // 2. Procesa el texto restante para URLs y emails en texto plano, con cuidado de no volver a procesar
+    //    las etiquetas <a> que ya existen.
     const parts = processedText.split(/(<a\b[^>]*>.*?<\/a>)/gi);
 
     return parts
@@ -91,9 +97,12 @@ export class CellContentBuilder {
         if (part.match(/^<a\b/i)) {
           return part;
         }
-        // De lo contrario, busca y envuelve las URLs de texto plano.
-        // Ejemplo: https://google.com -> <a href="https://google.com">https://google.com</a>
-        return part.replace(urlRegex, '<a href="$&">$&</a>');
+        // De lo contrario, busca y envuelve las URLs y emails de texto plano.
+        // Ejemplo URL: https://google.com -> <a href="https://google.com">https://google.com</a>
+        // Ejemplo Email: test@test.com -> <a href="mailto:test@test.com">test@test.com</a>
+        return part
+          .replace(urlRegex, '<a href="$&">$&</a>')
+          .replace(emailRegex, '<a href="mailto:$&">$&</a>');
       })
       .join('');
   }

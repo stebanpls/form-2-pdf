@@ -99,7 +99,7 @@ export class ReportPdfBuilder {
                   table: {
                     // CLAVE: Usamos '*' para que las columnas se expandan y llenen el 30% del
                     // espacio asignado por la tabla padre, eliminando el espacio vacío a la derecha.
-                    widths: ['*', '*'],
+                    widths: ['auto', '*'],
                     // CLAVE: Forzamos a las filas a ocupar todo el espacio vertical disponible,
                     // lo que estira la línea vertical hasta el fondo y centra el texto.
                     heights: ['*', '*'],

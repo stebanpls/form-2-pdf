@@ -37,6 +37,17 @@
   border-radius: 0;
 }
 
+/* Cuando está en pantalla completa, eliminamos los bordes redondeados de los hijos
+   para que ocupen el 100% del espacio sin dejar huecos en las esquinas. */
+.preview-container.fullscreen .preview-header {
+  border-radius: 0;
+}
+
+.preview-container.fullscreen .iframe-frame {
+  border-radius: 0;
+  padding: 0; /* Eliminamos el padding del marco para que el iframe ocupe todo el espacio. */
+}
+
 .preview-header {
   display: flex;
   justify-content: space-between;
@@ -134,7 +145,7 @@
   border-bottom-left-radius: 8px;
   border-bottom-right-radius: 8px;
   overflow: hidden; /* Asegura que el iframe no se desborde de las esquinas redondeadas del marco */
-  min-height: 0; /* Permite que el marco se encoja verticalmente en flexbox */
+  min-height: 0; /* Permite que el iframe se encoja verticalmente en flexbox */
 }
 
 .preview-container iframe {
