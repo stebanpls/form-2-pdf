@@ -58,11 +58,10 @@ export class ReportPdfBuilder {
           vLineWidth: (i: number) => (i === 1 ? 0.5 : 0),
           hLineColor: () => COLORS.BORDER,
           vLineColor: () => COLORS.BORDER,
-          // Padding interno para las celdas de la tabla anidada.
-          // CLAVE: Controlamos el padding por fila para un ajuste perfecto.
-          paddingTop: (i: number) =>
-            i === 0 ? CELL_VERTICAL_PADDING / 2 : CELL_VERTICAL_PADDING / 1.5,
-          paddingBottom: (i: number) => (i === 0 ? CELL_VERTICAL_PADDING / 1.5 : 0),
+          // CLAVE: Con `heights: ['*', '*']` (la estrategia de estiramiento), el padding debe ser simétrico
+          // para que el texto se centre correctamente dentro de las filas estiradas.
+          paddingTop: () => CELL_VERTICAL_PADDING / 2,
+          paddingBottom: () => CELL_VERTICAL_PADDING / 2,
           paddingLeft: () => CELL_HORIZONTAL_PADDING,
           paddingRight: () => CELL_HORIZONTAL_PADDING,
         };
@@ -91,14 +90,19 @@ export class ReportPdfBuilder {
           // Usamos una tabla principal de una fila y tres columnas.
           // La primera columna contiene una tabla anidada para el diseño complejo.
           table: {
-            widths: ['auto', '*', 'auto'],
+            // Usamos un ancho fijo para evitar que el texto se rompa, como descubriste.
+            widths: ['30%', '*', 'auto'],
             body: [
               [
                 // --- Columna 1: Contiene una tabla anidada ---
                 {
                   table: {
-                    // Usamos '*' para que las columnas se expandan y llenen el espacio disponible.
+                    // CLAVE: Usamos '*' para que las columnas se expandan y llenen el 30% del
+                    // espacio asignado por la tabla padre, eliminando el espacio vacío a la derecha.
                     widths: ['*', '*'],
+                    // CLAVE: Forzamos a las filas a ocupar todo el espacio vertical disponible,
+                    // lo que estira la línea vertical hasta el fondo y centra el texto.
+                    heights: ['*', '*'],
                     body: [
                       // Fila 1 de la tabla anidada (código)
                       [
