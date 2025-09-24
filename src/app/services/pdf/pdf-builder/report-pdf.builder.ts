@@ -1,4 +1,4 @@
-import { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
+import { TDocumentDefinitions, Content, Table, TableLayout } from 'pdfmake/interfaces';
 import { FormField, HeaderConfig, ReportData } from '../../../models/report.model';
 import {
   CELL_HORIZONTAL_PADDING,
@@ -8,6 +8,7 @@ import {
   getMainTableLayout,
   STYLES,
 } from './pdf-report.config';
+import { PdfGeneratorService } from '../pdf-generator.service';
 import { SectionGrouperUtil } from '../../../shared/utils/section-grouper.util';
 import { ISectionBuilder } from './section-builders/isection.builder';
 import { DynamicTableSectionBuilder } from './section-builders/dynamic-table-section.builder';
@@ -20,12 +21,12 @@ import { StandardSectionBuilder } from './section-builders/standard-section.buil
 export class ReportPdfBuilder {
   private readonly sectionBuilders: ISectionBuilder[];
 
-  constructor() {
+  constructor(private pdfGeneratorService: PdfGeneratorService) {
     // El orden es importante: los builders más específicos deben ir primero.
     this.sectionBuilders = [
       new DynamicTableSectionBuilder(),
       new DetailedMultipleChoiceSectionBuilder(),
-      new StandardSectionBuilder(), // El builder por defecto va al final.
+      new StandardSectionBuilder(),
     ];
   }
 
@@ -58,12 +59,11 @@ export class ReportPdfBuilder {
           vLineWidth: (i: number) => (i === 1 ? 0.5 : 0),
           hLineColor: () => COLORS.BORDER,
           vLineColor: () => COLORS.BORDER,
-          // CLAVE: Con `heights: ['*', '*']` (la estrategia de estiramiento), el padding debe ser simétrico
-          // para que el texto se centre correctamente dentro de las filas estiradas.
-          paddingTop: () => CELL_VERTICAL_PADDING / 2,
-          paddingBottom: () => CELL_VERTICAL_PADDING / 2,
-          paddingLeft: () => CELL_HORIZONTAL_PADDING,
-          paddingRight: () => CELL_HORIZONTAL_PADDING,
+          // CLAVE: Padding ajustado para que la caja se vea más compacta, como sugeriste.
+          paddingTop: () => 4,
+          paddingBottom: () => 4,
+          paddingLeft: () => 4,
+          paddingRight: () => 4,
         };
 
         // Layout personalizado para la tabla principal de la cabecera.
@@ -73,16 +73,13 @@ export class ReportPdfBuilder {
           // Sobrescribimos las funciones de padding.
           paddingLeft: (i: number) => {
             // La primera columna (i=0), que contiene la tabla anidada, no necesita padding izquierdo.
-            return i === 0 ? 0 : CELL_HORIZONTAL_PADDING;
+            return i === 0 ? 0 : CELL_HORIZONTAL_PADDING; // Sin padding para la columna 0
           },
           paddingRight: (i: number) => {
-            // Tampoco necesita padding derecho.
+            // La primera columna tampoco necesita padding derecho.
             return i === 0 ? 0 : CELL_HORIZONTAL_PADDING;
           },
-          // CLAVE: Eliminamos el padding vertical de la tabla principal.
-          // La altura de la fila será determinada por el contenido de la celda más alta (la sección 1),
-          // y el centrado de las otras celdas se forzará con una tabla anidada.
-          paddingTop: () => 0,
+          paddingTop: () => 0, // El centrado vertical lo maneja cada celda.
           paddingBottom: () => 0,
         };
 
@@ -90,21 +87,18 @@ export class ReportPdfBuilder {
           // Usamos una tabla principal de una fila y tres columnas.
           // La primera columna contiene una tabla anidada para el diseño complejo.
           table: {
-            // Usamos un ancho fijo para evitar que el texto se rompa, como descubriste.
+            // Anchos flexibles: 30% para la primera columna, el resto para la del medio,
+            // y lo que necesite el logo para la tercera.
             widths: ['30%', '*', 'auto'],
             body: [
               [
                 // --- Columna 1: Contiene una tabla anidada ---
                 {
                   table: {
-                    // CLAVE: Usamos '*' para que las columnas se expandan y llenen el 30% del
-                    // espacio asignado por la tabla padre, eliminando el espacio vacío a la derecha.
-                    widths: ['auto', '*'],
-                    // CLAVE: Forzamos a las filas a ocupar todo el espacio vertical disponible,
-                    // lo que estira la línea vertical hasta el fondo y centra el texto.
-                    heights: ['*', '*'],
+                    // CLAVE: 'auto' para la primera columna (Versión) y '*' para la segunda (Página).
+                    // Esto evita que el texto "Página X de Y" se corte.
+                    widths: ['*', '*'],
                     body: [
-                      // Fila 1 de la tabla anidada (código)
                       [
                         {
                           text: headerConfig.documentCode ?? '',
@@ -112,12 +106,17 @@ export class ReportPdfBuilder {
                           alignment: 'center',
                           bold: true,
                           fontSize: 9,
+                          fillColor: COLORS.HEADER_BACKGROUND,
+                          color: COLORS.HEADER_TEXT,
                         },
                         {},
                       ],
-                      // Fila 2 de la tabla anidada (versión y página)
                       [
-                        { text: headerConfig.version ?? '', alignment: 'center', fontSize: 9 },
+                        {
+                          text: headerConfig.version ?? '',
+                          alignment: 'center',
+                          fontSize: 9,
+                        },
                         {
                           text: `Página ${currentPage} de ${pageCount}`,
                           alignment: 'center',
@@ -127,54 +126,58 @@ export class ReportPdfBuilder {
                     ],
                   },
                   layout: nestedTableLayout,
+                  verticalAlign: 'center',
                 },
 
                 // --- Columna 2: Texto Central ---
                 {
-                  // Contenido envuelto en una tabla invisible para forzar el centrado vertical.
+                  // CLAVE: Se aplica la tabla de centrado a la Sección 2 para consistencia.
+                  // Este método es más robusto que 'verticalAlign' para asegurar el centrado.
                   table: {
                     widths: ['*'],
                     heights: ['*', 'auto', '*'],
                     body: [
-                      [{ text: '', border: [false, false, false, false] }],
+                      [''], // Espaciador superior
                       [
                         {
-                          text: headerConfig.centerText ?? '',
+                          text: (headerConfig.centerText ?? '').toUpperCase(),
                           alignment: 'center',
                           bold: true,
-                          fontSize: 10,
-                          border: [false, false, false, false],
+                          fontSize: 11,
+                          color: COLORS.LABEL_TEXT,
                         },
                       ],
-                      [{ text: '', border: [false, false, false, false] }],
+                      [''], // Espaciador inferior
                     ],
                   },
                   layout: 'noBorders',
                 },
 
-                // --- Columna 3: Logo ---
-                headerConfig.logoBase64
-                  ? {
-                      // Contenido envuelto en una tabla invisible para forzar el centrado vertical.
-                      table: {
-                        widths: ['*'],
-                        heights: ['*', 'auto', '*'],
-                        body: [
-                          [{ text: '', border: [false, false, false, false] }],
-                          [
-                            {
+                // --- Columna 3: Logo (también con centrado vertical forzado) ---
+                {
+                  // CLAVE: Volvemos a la tabla invisible para el logo, que es el método más
+                  // robusto para el centrado vertical de imágenes.
+                  table: {
+                    widths: ['*'],
+                    heights: ['*', 'auto', '*'],
+                    body: [
+                      [''], // Espaciador superior
+                      [
+                        // El contenido real (la imagen) va en la fila del medio.
+                        headerConfig.logoBase64
+                          ? {
                               image: headerConfig.logoBase64,
                               width: 80,
                               alignment: 'center',
-                              border: [false, false, false, false],
-                            },
-                          ],
-                          [{ text: '', border: [false, false, false, false] }],
-                        ],
-                      },
-                      layout: 'noBorders',
-                    }
-                  : { text: '' },
+                            }
+                          : {},
+                      ],
+                      [''], // Espaciador inferior
+                    ],
+                  },
+                  // La tabla de centrado no debe tener bordes.
+                  layout: 'noBorders',
+                },
               ],
             ],
           },

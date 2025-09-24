@@ -46,7 +46,7 @@ export class PdfGeneratorService {
     const generationDate = formatDate(new Date(), 'dd/MM/yyyy', 'es-CO');
     const dataWithDate = { ...rawData, generationDate };
 
-    const builder = new ReportPdfBuilder();
+    const builder = new ReportPdfBuilder(this);
     const docDefinition = builder.build(dataWithDate, formFields, headerConfig);
 
     docDefinition.defaultStyle = {

@@ -70,39 +70,47 @@ export class CellContentBuilder {
       return '';
     }
 
-    // Regex para enlaces web estilo Markdown: [texto](url)
-    const markdownWebLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+    // Regex para enlaces web estilo Markdown: [texto](url). No debe capturar emails.
+    const markdownWebLinkRegex =
+      /\[([^\]]+)\]\(((?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+[^\s@)]*)\)/g;
 
     // Regex para enlaces de email estilo Markdown: [texto](email)
-    const markdownEmailLinkRegex = /\[([^\]]+)\]\(([^@\s\)]+@[^@\s\)]+)\)/g;
+    const markdownEmailLinkRegex =
+      /\[([^\]]+)\]\(([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\)/g;
 
-    // Regex para URLs en texto plano.
-    const urlRegex = /(\bhttps?:\/\/[^\s<]+)/g;
+    // Regex para URLs en texto plano. No debe capturar emails.
+    // Busca http, www, o dominios que no contengan '@'.
+    const urlRegex =
+      /\b((?:https?:\/\/|www\.)[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+[^\s<]*|(?!.*@)\b[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?[^\s<]*)/g;
 
-    // Regex para emails en texto plano.
+    // Regex para emails en texto plano. Más precisa.
     const emailRegex = /(\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b)/gi;
 
-    // 1. Convierte los enlaces estilo Markdown (ambos web y email) a etiquetas <a> HTML.
+    // --- Orden de procesamiento lógico ---
+
+    // 1. Procesar primero los formatos de Markdown.
     let processedText = text
-      .replace(markdownWebLinkRegex, '<a href="$2">$1</a>')
-      .replace(markdownEmailLinkRegex, '<a href="mailto:$2">$1</a>');
+      .replace(markdownEmailLinkRegex, '<a href="mailto:$2">$1</a>')
+      .replace(markdownWebLinkRegex, (match, linkText, url) => {
+        const href = url.startsWith('http') ? url : `http://${url}`;
+        return `<a href="${href}">${linkText}</a>`;
+      });
 
     // 2. Procesa el texto restante para URLs y emails en texto plano, con cuidado de no volver a procesar
-    //    las etiquetas <a> que ya existen.
+    //    las etiquetas <a> que ya hemos creado.
     const parts = processedText.split(/(<a\b[^>]*>.*?<\/a>)/gi);
 
     return parts
       .map((part) => {
-        // Si el fragmento es una etiqueta <a> existente, la deja intacta.
         if (part.match(/^<a\b/i)) {
           return part;
         }
-        // De lo contrario, busca y envuelve las URLs y emails de texto plano.
-        // Ejemplo URL: https://google.com -> <a href="https://google.com">https://google.com</a>
-        // Ejemplo Email: test@test.com -> <a href="mailto:test@test.com">test@test.com</a>
-        return part
-          .replace(urlRegex, '<a href="$&">$&</a>')
-          .replace(emailRegex, '<a href="mailto:$&">$&</a>');
+        // Procesar primero emails en texto plano, luego URLs.
+        return part.replace(emailRegex, '<a href="mailto:$&">$&</a>').replace(urlRegex, (url) => {
+          if (!url) return '';
+          const href = url.startsWith('http') ? url : `http://${url}`;
+          return `<a href="${href}">${url}</a>`;
+        });
       })
       .join('');
   }
