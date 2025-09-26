@@ -5,7 +5,9 @@
     [class.fullscreen]="isFullscreen()"
   >
     <div class="preview-header">
-      <h3>{{ title }}</h3>
+      <h3 [title]="pdfStateService.pdfTitle() + '.pdf'">
+        {{ pdfStateService.pdfTitle() + '.pdf' }}
+      </h3>
       <div class="preview-header-actions">
         <button class="btn btn-primary btn-icon-text" (click)="download.emit()" title="Descargar">
           <svg class="icon" viewBox="0 0 24 24">

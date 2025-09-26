@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormField } from '../../models/report.model';
+import { FormField, HeaderConfig } from '../../models/report.model';
 import { ReportForm } from '../../models/form.model';
 import { CommonModule } from '@angular/common';
 import { DynamicFormService } from '../../services/form/dynamic-form.service';
@@ -65,6 +65,7 @@ export class FormComponent {
     form: this.fb.group<{ [key: string]: any }>({}),
     fields: [] as FormField[],
     title: 'Formulario',
+    headerConfig: undefined as HeaderConfig | undefined,
   };
 
   // A signal that holds the state of our form definition, loaded asynchronously.
@@ -86,7 +87,18 @@ export class FormComponent {
   // Computed signals that derive their values from the formDefinition signal.
   // They automatically update when formDefinition changes.
   public readonly formFields = computed(() => this.formDefinition().fields);
-  public readonly reportTitle = computed(() => this.formDefinition().title);
+  public readonly reportTitle = computed(() => this.formDefinition()?.title ?? 'Formulario');
+
+  // Computed signal to generate the desired PDF filename.
+  private readonly pdfFilename = computed(() => {
+    const headerConfig = this.formDefinition()?.headerConfig;
+    if (headerConfig?.documentCode && headerConfig?.centerText) {
+      return `${headerConfig.documentCode} - ${headerConfig.centerText}`;
+    }
+    // Fallback to the general report title if specific fields are not available.
+    return this.reportTitle();
+  });
+
   // We use a getter to access the form from the main signal and cast it to our strong type.
   public get dataForm(): FormGroup<ReportForm> {
     return this.formDefinition().form as unknown as FormGroup<ReportForm>;
@@ -178,17 +190,17 @@ export class FormComponent {
     const context = {
       form: this.dataForm,
       formFields: this.formFields(),
-      defaultReportTitle: this.reportTitle(),
+      headerConfig: this.formDefinition().headerConfig,
+      pdfTitle: this.pdfFilename(), // Usamos el nombre de archivo dinámico como título
     };
     const result = await this.pdfStateService.generatePdfPreview(context, this.isLoading);
     if (!result.success) {
       this.notificationService.show('Hubo un error al generar la vista previa.', 'error');
     }
-    // On success, the modal is opened automatically by the service's state change.
   }
 
-  onDownloadPdf(): void {
-    this.pdfStateService.downloadCurrentPdf(this.reportTitle());
+  async onDownloadPdf(): Promise<void> {
+    await this.pdfStateService.downloadCurrentPdf();
   }
 
   onClosePreview(): void {

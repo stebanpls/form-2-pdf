@@ -49,6 +49,15 @@ export class ReportsPageComponent {
   public readonly reportTitle = computed(
     () => this.formDefinition()?.title ?? 'Reporte de Actividades'
   );
+  // Computed signal to generate the desired PDF filename.
+  private readonly pdfFilename = computed(() => {
+    const headerConfig = this.headerConfig();
+    if (headerConfig?.documentCode && headerConfig?.centerText) {
+      return `${headerConfig.documentCode} - ${headerConfig.centerText}`;
+    }
+    // Fallback to the general report title.
+    return this.reportTitle();
+  });
 
   // Signal that holds the list of reports
   public readonly reports = signal<ReportDocument[]>([]);
@@ -116,8 +125,8 @@ export class ReportsPageComponent {
     const result = await this.pdfStateService.generatePdfPreviewFromData(
       report.data,
       fields,
-      this.headerConfig(), // Pasamos la nueva configuración de la cabecera
-      this.reportTitle(),
+      this.headerConfig(),
+      this.pdfFilename(), // Usamos el nombre de archivo dinámico como título
       this.isLoading
     );
 
@@ -127,7 +136,7 @@ export class ReportsPageComponent {
   }
 
   onDownloadPdf(): void {
-    this.pdfStateService.downloadCurrentPdf(this.reportTitle());
+    this.pdfStateService.downloadCurrentPdf();
   }
 
   onClosePreview(): void {

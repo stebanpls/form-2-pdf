@@ -8,5 +8,5 @@ export interface PdfGenerationContext {
   form: FormGroup;
   formFields: FormField[];
   headerConfig?: HeaderConfig;
-  defaultReportTitle: string;
+  pdfTitle: string;
 }

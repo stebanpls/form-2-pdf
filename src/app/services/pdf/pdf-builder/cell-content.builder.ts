@@ -78,20 +78,21 @@ export class CellContentBuilder {
     const markdownEmailLinkRegex =
       /\[([^\]]+)\]\(([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\)/g;
 
-    // Regex para URLs en texto plano. No debe capturar emails.
-    // Busca http, www, o dominios que no contengan '@'.
-    const urlRegex =
-      /\b((?:https?:\/\/|www\.)[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+[^\s<]*|(?!.*@)\b[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?[^\s<]*)/g;
-
-    // Regex para emails en texto plano. Más precisa.
-    const emailRegex = /(\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b)/gi;
+    // --- Regex Unificada para emails y URLs ---
+    // Esta regex busca en una sola pasada para evitar conflictos.
+    // Grupo 1: Captura un email completo (ej: user@example.com)
+    // Grupo 2: Captura una URL que empieza con http/www (ej: https://example.com)
+    // Grupo 3: Captura un dominio simple (ej: example.com), pero evita capturar la parte de un email
+    //          usando un negative lookbehind `(?<!@\S*)` para asegurar que no haya un '@' antes.
+    const combinedRegex =
+      /\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})|((?:https?:\/\/|www\.)[^\s<]+)|((?<!@\S*)[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+[^\s<]*)\b/gi;
 
     // --- Orden de procesamiento lógico ---
 
     // 1. Procesar primero los formatos de Markdown.
     let processedText = text
       .replace(markdownEmailLinkRegex, '<a href="mailto:$2">$1</a>')
-      .replace(markdownWebLinkRegex, (match, linkText, url) => {
+      .replace(markdownWebLinkRegex, (_match, linkText, url) => {
         const href = url.startsWith('http') ? url : `http://${url}`;
         return `<a href="${href}">${linkText}</a>`;
       });
@@ -105,11 +106,19 @@ export class CellContentBuilder {
         if (part.match(/^<a\b/i)) {
           return part;
         }
-        // Procesar primero emails en texto plano, luego URLs.
-        return part.replace(emailRegex, '<a href="mailto:$&">$&</a>').replace(urlRegex, (url) => {
-          if (!url) return '';
-          const href = url.startsWith('http') ? url : `http://${url}`;
-          return `<a href="${href}">${url}</a>`;
+        // Usamos la regex combinada. El callback determina si es un email o una URL.
+        return part.replace(combinedRegex, (match, email, urlWithProtocol, plainUrl) => {
+          if (email) {
+            return `<a href="mailto:${email}">${email}</a>`;
+          }
+          // Unificamos las dos capturas de URL.
+          const url = urlWithProtocol || plainUrl;
+          if (url) {
+            const href = url.startsWith('http') ? url : `http://${url}`;
+            return `<a href="${href}">${url}</a>`;
+          }
+
+          return match; // No debería ocurrir, pero es una salvaguarda.
         });
       })
       .join('');

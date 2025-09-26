@@ -17,6 +17,7 @@ export class PdfStateService {
   // --- State Management for PDF Preview ---
   public readonly docDefinition = signal<TDocumentDefinitions | null>(null);
   private readonly pdfPreviewUrl = signal<string | null>(null);
+  public readonly pdfTitle = signal<string>('Vista Previa del Documento');
 
   public readonly safePdfPreviewUrl = computed<SafeResourceUrl | null>(() => {
     const url = this.pdfPreviewUrl();
@@ -26,14 +27,14 @@ export class PdfStateService {
   async generatePdfPreviewFromData(
     reportData: ReportData,
     formFields: FormField[],
-    headerConfig: HeaderConfig | undefined,
-    defaultReportTitle: string,
+    headerConfig: HeaderConfig | undefined, // Mantener para la construcción del PDF
+    pdfTitle: string, // Nuevo parámetro para el título dinámico
     isLoading: WritableSignal<boolean>
   ): Promise<ActionResult> {
     isLoading.set(true);
     try {
-      const reportTitle = reportData['title'] || defaultReportTitle;
-      const dataForPdf = { ...reportData, title: reportTitle };
+      this.pdfTitle.set(pdfTitle); // Guardamos el título dinámico en nuestra señal
+      const dataForPdf = { ...reportData, title: pdfTitle };
 
       const docDef = this.pdfGenerator.createDocDefinition(dataForPdf, formFields, headerConfig);
       this.docDefinition.set(docDef);
@@ -60,24 +61,23 @@ export class PdfStateService {
     return this.generatePdfPreviewFromData(
       rawData,
       context.formFields,
-      context.headerConfig,
-      context.defaultReportTitle,
+      context.headerConfig, // Pasamos el headerConfig
+      context.pdfTitle, // Pasamos el título dinámico
       isLoading
     );
   }
 
-  downloadCurrentPdf(defaultReportTitle: string): void {
+  async downloadCurrentPdf(): Promise<void> {
     const docDef = this.docDefinition();
     if (!docDef) {
       console.error('No hay definición de documento para descargar.');
       return;
     }
+    const pdfTitle = this.pdfTitle(); // Usamos el título guardado en el estado del servicio
 
-    // El título ya está dentro de la definición del documento.
-    const pdfTitle =
-      ((docDef.content as Content[])[0] as { text: string }).text || defaultReportTitle;
-
-    this.pdfGenerator.downloadPdf(docDef, pdfTitle);
+    // Usamos directamente el título que nos pasa el componente.
+    // Es más simple, más seguro y no depende de la estructura interna del PDF.
+    await this.pdfGenerator.downloadPdf(docDef, pdfTitle);
   }
 
   closePreview(): void {
@@ -87,5 +87,6 @@ export class PdfStateService {
     }
     this.pdfPreviewUrl.set(null);
     this.docDefinition.set(null);
+    this.pdfTitle.set('Vista Previa del Documento'); // Reseteamos el título
   }
 }

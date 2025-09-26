@@ -7,9 +7,11 @@ import {
   Input,
   Output,
   SecurityContext,
+  inject,
   ViewChild,
   signal,
 } from '@angular/core';
+import { PdfStateService } from '../../../services/pdf/pdf-state.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 @Component({
@@ -22,7 +24,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 })
 export class PdfPreviewModalComponent {
   @Input({ required: true }) url!: SafeResourceUrl;
-  @Input() title = 'Vista Previa del Documento';
+  // El título ahora se obtiene directamente del servicio de estado para asegurar la consistencia.
 
   @Output() close = new EventEmitter<void>();
   @Output() download = new EventEmitter<void>();
@@ -32,7 +34,8 @@ export class PdfPreviewModalComponent {
   // Signal para controlar el estado de la pantalla completa.
   public readonly isFullscreen = signal(false);
 
-  constructor(private sanitizer: DomSanitizer) {}
+  // Inyectamos el servicio de estado para acceder al título dinámico.
+  public readonly pdfStateService = inject(PdfStateService);
 
   // Stop propagation to prevent the overlay click from being triggered
   onContainerClick(event: MouseEvent): void {

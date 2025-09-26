@@ -9,22 +9,28 @@ import { ReportPdfBuilder } from './pdf-builder/report-pdf.builder';
   providedIn: 'root',
 })
 export class PdfGeneratorService {
+  // Guardamos la instancia de pdfMake una vez que se carga para no tener que recargarla.
+  private pdfMakeInstance: any | null = null;
+
   constructor() {
     registerLocaleData(localeEsCO);
   }
 
+  /**
+   * Carga y configura pdfmake de forma asíncrona, pero solo la primera vez.
+   * Las llamadas subsecuentes devolverán la instancia ya cargada.
+   */
   private async configurePdfMake() {
-    const pdfMake = (await import('pdfmake/build/pdfmake')).default;
+    if (this.pdfMakeInstance) {
+      return this.pdfMakeInstance;
+    }
 
-    // Usamos una importación dinámica para obtener el objeto vfs de tu archivo de fuentes.
+    const pdfMake = (await import('pdfmake/build/pdfmake')).default;
     const { vfs } = await import('../../../../src/assets/fonts/pdf-fonts');
 
-    // Ahora, con el objeto vfs en mano, se lo pasamos al sistema de archivos virtual de pdfMake.
     // @ts-ignore
     pdfMake.addVirtualFileSystem(vfs);
 
-    // Y aquí, le decimos a pdfmake cómo se llama la fuente que usaremos.
-    // Los nombres 'arial.ttf', 'arialbd.ttf', etc., ahora se encontrarán en el VFS.
     // @ts-ignore
     pdfMake.setFonts({
       Arial: {
@@ -35,7 +41,8 @@ export class PdfGeneratorService {
       },
     });
 
-    return pdfMake;
+    this.pdfMakeInstance = pdfMake;
+    return this.pdfMakeInstance;
   }
 
   public createDocDefinition(
@@ -43,15 +50,12 @@ export class PdfGeneratorService {
     formFields: FormField[],
     headerConfig: HeaderConfig | undefined
   ): TDocumentDefinitions {
+    // La fecha de generación se debe tomar en el momento de la creación, no de la plantilla.
     const generationDate = formatDate(new Date(), 'dd/MM/yyyy', 'es-CO');
     const dataWithDate = { ...rawData, generationDate };
 
     const builder = new ReportPdfBuilder(this);
     const docDefinition = builder.build(dataWithDate, formFields, headerConfig);
-
-    docDefinition.defaultStyle = {
-      font: 'Arial',
-    };
 
     return docDefinition;
   }
@@ -68,7 +72,7 @@ export class PdfGeneratorService {
 
   public async downloadPdf(docDefinition: TDocumentDefinitions, title: string): Promise<void> {
     const pdfMake = await this.configurePdfMake();
-    const filename = this.sanitizeFilename(title || 'reporte') + '.pdf';
+    const filename = this.sanitizeFilename(title) + '.pdf';
     pdfMake.createPdf(docDefinition).download(filename);
   }
 
