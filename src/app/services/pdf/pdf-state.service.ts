@@ -81,10 +81,8 @@ export class PdfStateService {
   }
 
   closePreview(): void {
-    const url = this.pdfPreviewUrl();
-    if (url) {
-      URL.revokeObjectURL(url);
-    }
+    // Con Data URIs, ya no es necesario revocar la URL del objeto.
+    // El recolector de basura se encargará de la limpieza.
     this.pdfPreviewUrl.set(null);
     this.docDefinition.set(null);
     this.pdfTitle.set('Vista Previa del Documento'); // Reseteamos el título

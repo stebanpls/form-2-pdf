@@ -14,6 +14,7 @@ import { ISectionBuilder } from './section-builders/isection.builder';
 import { DynamicTableSectionBuilder } from './section-builders/dynamic-table-section.builder';
 import { DetailedMultipleChoiceSectionBuilder } from './section-builders/detailed-multiple-choice-section.builder';
 import { StandardSectionBuilder } from './section-builders/standard-section.builder';
+import { LOCAL_LOGO_BASE64 } from '../../../../assets/images/local-logo';
 
 /**
  * Construye la definición del PDF agrupando los campos en tablas por sección.
@@ -113,6 +114,12 @@ export class ReportPdfBuilder {
     pageCount: number,
     headerConfig: HeaderConfig
   ): Content {
+    // Lógica de prioridad para el logo:
+    // 1. Usar el logo local si existe.
+    // 2. Si no, usar el logo de la base de datos (headerConfig).
+    // 3. Si ninguno existe, no se mostrará ningún logo.
+    const logoToUse = LOCAL_LOGO_BASE64 || headerConfig.logoBase64;
+
     return {
       // Usamos una tabla principal de una fila y tres columnas.
       table: {
@@ -192,11 +199,7 @@ export class ReportPdfBuilder {
                 heights: ['*', 'auto', '*'],
                 body: [
                   [''],
-                  [
-                    headerConfig.logoBase64
-                      ? { image: headerConfig.logoBase64, width: 80, alignment: 'center' }
-                      : {},
-                  ],
+                  [logoToUse ? { image: logoToUse, width: 80, alignment: 'center' } : {}],
                   [''],
                 ],
               },

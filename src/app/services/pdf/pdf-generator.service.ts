@@ -64,9 +64,9 @@ export class PdfGeneratorService {
     const pdfMake = await this.configurePdfMake();
 
     return new Promise((resolve) => {
-      pdfMake.createPdf(docDefinition).getBlob((blob: Blob) => {
-        resolve(URL.createObjectURL(blob));
-      });
+      // Cambiamos getBlob por getDataUrl para obtener una Data URI directamente.
+      // Esto resuelve los problemas de seguridad de "Partitioned Blob URL".
+      pdfMake.createPdf(docDefinition).getDataUrl((dataUrl: string) => resolve(dataUrl));
     });
   }
 
