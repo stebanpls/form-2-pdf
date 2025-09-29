@@ -1,5 +1,5 @@
 import { TDocumentDefinitions, Content, Table, TableLayout } from 'pdfmake/interfaces';
-import { FormField, HeaderConfig, ReportData } from '../../../models/report.model';
+import { FormField, HeaderConfig, PdfMetadata, ReportData } from '../../../models/report.model';
 import {
   CELL_HORIZONTAL_PADDING,
   CELL_VERTICAL_PADDING,
@@ -15,6 +15,7 @@ import { DynamicTableSectionBuilder } from './section-builders/dynamic-table-sec
 import { DetailedMultipleChoiceSectionBuilder } from './section-builders/detailed-multiple-choice-section.builder';
 import { StandardSectionBuilder } from './section-builders/standard-section.builder';
 import { LOCAL_LOGO_BASE64 } from '../../../../assets/images/local-logo';
+import { DEFAULT_REPORT_TITLE } from '../../../shared/constants/app.constants';
 
 /**
  * Construye la definición del PDF agrupando los campos en tablas por sección.
@@ -35,7 +36,8 @@ export class ReportPdfBuilder {
     // Se elimina 'async' y la Promesa, ya que no mediremos la cabecera.
     rawData: ReportData,
     allFields: FormField[],
-    headerConfig?: HeaderConfig
+    headerConfig: HeaderConfig | undefined,
+    pdfMetadata: PdfMetadata | undefined
   ): TDocumentDefinitions {
     // Devuelve directamente la definición.
     const sortedFields = [...allFields].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -47,6 +49,37 @@ export class ReportPdfBuilder {
       // Ajustamos el margen superior para dar espacio a la cabecera.
       // Se restaura un margen superior fijo y generoso para evitar el solapamiento.
       pageMargins: [40, 80, 40, 60], // [izquierda, arriba, derecha, abajo] - Reducido para un espaciado más agradable.
+
+      // --- Propiedades Estructurales del Documento ---
+      // Leemos la configuración desde headerConfig, con valores por defecto recomendados.
+      tagged: pdfMetadata?.tagged ?? true, // Activar accesibilidad por defecto.
+
+      // --- Metadatos del Documento ---
+      // Esto establece el título interno del PDF, similar a lo que viste en el ejemplo.
+      info: {
+        // Usamos el título desde pdfMetadata si existe, si no, el título del documento,
+        // y como último recurso, el título por defecto que viene en rawData.
+        // Se usa ['...'] para cumplir con la regla de acceso a firmas de índice.
+        title:
+          pdfMetadata?.title ??
+          headerConfig?.documentTitle ??
+          (rawData['defaultTitle'] as string) ??
+          DEFAULT_REPORT_TITLE,
+        author: pdfMetadata?.author ?? 'Fundación Universitaria Konrad Lorenz',
+        subject: pdfMetadata?.subject ?? '',
+        keywords: pdfMetadata?.keywords ?? '',
+        creationDate: new Date(),
+        modDate: new Date(),
+        creator: pdfMetadata?.creator ?? 'form-2-pdf',
+        producer: pdfMetadata?.producer ?? 'pdfmake',
+        trapped: 'False',
+      },
+
+      // --- Propiedades de Seguridad ---
+      // Se leen desde la configuración. Si no se proveen, el PDF no tendrá restricciones.
+      userPassword: pdfMetadata?.userPassword,
+      ownerPassword: pdfMetadata?.ownerPassword,
+      permissions: pdfMetadata?.permissions,
 
       // --- INICIO DE LA NUEVA CABECERA DINÁMICA ---
       header: (currentPage, pageCount) => {
@@ -180,7 +213,7 @@ export class ReportPdfBuilder {
                   [''],
                   [
                     {
-                      text: (headerConfig.centerText ?? '').toUpperCase(),
+                      text: (headerConfig.documentTitle ?? '').toUpperCase(),
                       alignment: 'center',
                       bold: true,
                       fontSize: 11,

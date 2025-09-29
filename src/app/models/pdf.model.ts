@@ -1,5 +1,5 @@
 import { FormGroup } from '@angular/forms';
-import { FormField, HeaderConfig } from './report.model';
+import { FormField, HeaderConfig, PdfMetadata } from './report.model';
 
 /**
  * Encapsulates all the necessary information to generate a PDF document.
@@ -7,6 +7,7 @@ import { FormField, HeaderConfig } from './report.model';
 export interface PdfGenerationContext {
   form: FormGroup;
   formFields: FormField[];
-  headerConfig?: HeaderConfig;
+  headerConfig: HeaderConfig | undefined;
+  pdfMetadata: PdfMetadata | undefined;
   pdfTitle: string;
 }

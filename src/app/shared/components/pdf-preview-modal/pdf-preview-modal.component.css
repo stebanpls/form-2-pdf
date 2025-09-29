@@ -78,6 +78,21 @@
   min-width: 150px; /* Asegura un espacio mínimo para el título */
 }
 
+/* Estilos para la línea divisoria */
+.divider {
+  height: 24px; /* Altura para que se alinee con los botones */
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+  margin: 0 0.75rem; /* Espacio a ambos lados */
+  align-self: center; /* Asegura que se centre verticalmente en el flex container */
+}
+
+/* Nuevo contenedor para agrupar el separador y los botones */
+.actions-wrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0; /* Evita que el grupo de acciones se encoja */
+}
+
 .preview-header-actions {
   display: flex;
   align-items: center;
@@ -125,6 +140,17 @@
 }
 
 /* --- Diseño Responsivo para la cabecera (Estilo Outlook) --- */
+
+/* Cuando el espacio es reducido, ocultamos el texto de los botones principales. */
+@media (max-width: 750px) {
+  .preview-header .btn-icon-text span {
+    display: none;
+  }
+  .preview-header .btn-icon-text {
+    padding: 8px; /* Usamos el mismo padding que un botón de solo icono */
+  }
+}
+
 @media (max-width: 850px) {
   .preview-header {
     flex-direction: column; /* Apila los elementos verticalmente */

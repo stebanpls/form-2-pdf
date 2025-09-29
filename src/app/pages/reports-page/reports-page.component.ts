@@ -4,7 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
-import { FormField, HeaderConfig, ReportData, ReportDocument } from '../../models/report.model';
+import {
+  FormField,
+  HeaderConfig,
+  PdfMetadata,
+  ReportData,
+  ReportDocument,
+} from '../../models/report.model';
 import { ReportDataService } from '../../services/reports/report-data.service';
 import { DynamicFormService } from '../../services/form/dynamic-form.service';
 import { PdfStateService } from '../../services/pdf/pdf-state.service';
@@ -12,6 +18,7 @@ import { PdfPreviewModalComponent } from '../../shared/components/pdf-preview-mo
 import { ReportCrudService } from '../../services/reports/report-crud.service';
 import { NotificationService } from '../../services/notification.service';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { DEFAULT_REPORT_TITLE } from '../../shared/constants/app.constants';
 
 @Component({
   selector: 'app-reports-page',
@@ -37,7 +44,13 @@ export class ReportsPageComponent {
       catchError((err) => {
         console.error('Error loading form definition for PDF generation', err);
         // Aseguramos que el objeto de fallback tenga la estructura completa
-        return of({ form: null, fields: [] as FormField[], title: 'Reporte', headerConfig: {} });
+        return of({
+          form: null,
+          fields: [] as FormField[],
+          title: DEFAULT_REPORT_TITLE,
+          headerConfig: undefined,
+          pdfMetadata: undefined,
+        });
       })
     )
   );
@@ -46,14 +59,17 @@ export class ReportsPageComponent {
   public readonly headerConfig = computed(
     () => this.formDefinition()?.headerConfig as HeaderConfig | undefined
   );
+  public readonly pdfMetadata = computed(
+    () => this.formDefinition()?.pdfMetadata as PdfMetadata | undefined
+  );
   public readonly reportTitle = computed(
-    () => this.formDefinition()?.title ?? 'Reporte de Actividades'
+    () => this.formDefinition()?.title ?? DEFAULT_REPORT_TITLE
   );
   // Computed signal to generate the desired PDF filename.
   private readonly pdfFilename = computed(() => {
     const headerConfig = this.headerConfig();
-    if (headerConfig?.documentCode && headerConfig?.centerText) {
-      return `${headerConfig.documentCode} - ${headerConfig.centerText}`;
+    if (headerConfig?.documentCode && headerConfig?.documentTitle) {
+      return `${headerConfig.documentCode} - ${headerConfig.documentTitle}`;
     }
     // Fallback to the general report title.
     return this.reportTitle();
@@ -126,6 +142,7 @@ export class ReportsPageComponent {
       report.data,
       fields,
       this.headerConfig(),
+      this.pdfMetadata(),
       this.pdfFilename(), // Usamos el nombre de archivo dinámico como título
       this.isLoading
     );

@@ -57,7 +57,32 @@ export interface ReportDocument {
  */
 export interface HeaderConfig {
   documentCode?: string;
-  centerText?: string;
+  documentTitle?: string;
   logoBase64?: string;
   version?: string;
+}
+
+/**
+ * Define la estructura para los metadatos y propiedades estructurales del documento PDF.
+ * Se separa de HeaderConfig para una mejor organización.
+ */
+export interface PdfMetadata {
+  title?: string;
+  author?: string;
+  subject?: string;
+  keywords?: string;
+  creator?: string;
+  producer?: string;
+  // Propiedades estructurales del PDF
+  tagged?: boolean; // Para accesibilidad (PDF/UA).
+
+  // --- Propiedades de Seguridad ---
+  userPassword?: string;
+  ownerPassword?: string;
+  // Permisos del documento (qué puede hacer el usuario).
+  permissions?: {
+    printing?: 'highResolution' | 'lowResolution';
+    copying?: boolean;
+    modifying?: boolean;
+  };
 }

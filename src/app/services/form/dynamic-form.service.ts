@@ -8,7 +8,8 @@ import {
   AbstractControl,
 } from '@angular/forms';
 import { ReportDataService } from '../reports/report-data.service';
-import { FormField, FormFieldOption, HeaderConfig } from '../../models/report.model';
+import { FormField, FormFieldOption, HeaderConfig, PdfMetadata } from '../../models/report.model';
+import { DEFAULT_REPORT_TITLE } from '../../shared/constants/app.constants';
 import { from } from 'rxjs';
 
 @Injectable()
@@ -20,14 +21,16 @@ export class DynamicFormService {
     form: FormGroup<{ [key: string]: any }>;
     fields: FormField[];
     title: string;
-    headerConfig?: HeaderConfig;
+    headerConfig: HeaderConfig | undefined;
+    pdfMetadata: PdfMetadata | undefined;
   }> {
     const docSnap = await this.dataService.getFormDefinition();
 
     if (docSnap.exists()) {
       const data = docSnap.data(); // Safe access
-      const title = (data?.['title'] as string) || 'Reporte PDF'; // Extraemos el título
-      const headerConfig = data?.['headerConfig'] as HeaderConfig | undefined;
+      const title = (data?.['defaultTitle'] as string) || DEFAULT_REPORT_TITLE; // Usamos el nuevo campo 'defaultTitle'
+      const headerConfig = data?.['headerConfig'] as HeaderConfig | undefined; // Se mantiene
+      const pdfMetadata = data?.['pdfMetadata'] as PdfMetadata | undefined; // Leemos el nuevo mapa
       const fields = ((data?.['fields'] as FormField[]) ?? []).sort(
         // Use the variable and provide a fallback
         (a, b) => (a.order ?? 0) - (b.order ?? 0)
@@ -39,7 +42,7 @@ export class DynamicFormService {
       }
 
       const form = this.fb.group(formGroupConfig);
-      return { form, fields, title, headerConfig };
+      return { form, fields, title, headerConfig, pdfMetadata };
     } else {
       // It's better to reject the promise or throw an error if the template is not found.
       return Promise.reject('No form definition found in Firestore!');

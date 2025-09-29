@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormField, HeaderConfig } from '../../models/report.model';
+import { FormField, HeaderConfig, PdfMetadata } from '../../models/report.model';
 import { ReportForm } from '../../models/form.model';
 import { CommonModule } from '@angular/common';
 import { DynamicFormService } from '../../services/form/dynamic-form.service';
@@ -23,6 +23,7 @@ import { ReportCrudService } from '../../services/reports/report-crud.service';
 import { ReportDataService } from '../../services/reports/report-data.service';
 import { NotificationService } from '../../services/notification.service';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { DEFAULT_REPORT_TITLE } from '../../shared/constants/app.constants';
 
 @Component({
   selector: 'app-form',
@@ -64,8 +65,9 @@ export class FormComponent {
   private readonly initialFormState = {
     form: this.fb.group<{ [key: string]: any }>({}),
     fields: [] as FormField[],
-    title: 'Formulario',
+    title: DEFAULT_REPORT_TITLE,
     headerConfig: undefined as HeaderConfig | undefined,
+    pdfMetadata: undefined as PdfMetadata | undefined,
   };
 
   // A signal that holds the state of our form definition, loaded asynchronously.
@@ -87,13 +89,15 @@ export class FormComponent {
   // Computed signals that derive their values from the formDefinition signal.
   // They automatically update when formDefinition changes.
   public readonly formFields = computed(() => this.formDefinition().fields);
-  public readonly reportTitle = computed(() => this.formDefinition()?.title ?? 'Formulario');
+  public readonly reportTitle = computed(
+    () => this.formDefinition()?.title ?? DEFAULT_REPORT_TITLE
+  );
 
   // Computed signal to generate the desired PDF filename.
   private readonly pdfFilename = computed(() => {
     const headerConfig = this.formDefinition()?.headerConfig;
-    if (headerConfig?.documentCode && headerConfig?.centerText) {
-      return `${headerConfig.documentCode} - ${headerConfig.centerText}`;
+    if (headerConfig?.documentCode && headerConfig?.documentTitle) {
+      return `${headerConfig.documentCode} - ${headerConfig.documentTitle}`;
     }
     // Fallback to the general report title if specific fields are not available.
     return this.reportTitle();
@@ -191,6 +195,7 @@ export class FormComponent {
       form: this.dataForm,
       formFields: this.formFields(),
       headerConfig: this.formDefinition().headerConfig,
+      pdfMetadata: this.formDefinition().pdfMetadata,
       pdfTitle: this.pdfFilename(), // Usamos el nombre de archivo dinámico como título
     };
     const result = await this.pdfStateService.generatePdfPreview(context, this.isLoading);

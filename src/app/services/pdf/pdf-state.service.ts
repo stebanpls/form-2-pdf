@@ -2,7 +2,7 @@ import { computed, inject, Injectable, signal, WritableSignal } from '@angular/c
 import { FormGroup } from '@angular/forms';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { PdfGeneratorService } from './pdf-generator.service';
-import { FormField, HeaderConfig, ReportData } from '../../models/report.model';
+import { FormField, HeaderConfig, PdfMetadata, ReportData } from '../../models/report.model';
 import { ActionResult } from '../../models/action-result.model';
 import { PdfGenerationContext } from '../../models/pdf.model';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -27,7 +27,8 @@ export class PdfStateService {
   async generatePdfPreviewFromData(
     reportData: ReportData,
     formFields: FormField[],
-    headerConfig: HeaderConfig | undefined, // Mantener para la construcción del PDF
+    headerConfig: HeaderConfig | undefined,
+    pdfMetadata: PdfMetadata | undefined,
     pdfTitle: string, // Nuevo parámetro para el título dinámico
     isLoading: WritableSignal<boolean>
   ): Promise<ActionResult> {
@@ -36,7 +37,12 @@ export class PdfStateService {
       this.pdfTitle.set(pdfTitle); // Guardamos el título dinámico en nuestra señal
       const dataForPdf = { ...reportData, title: pdfTitle };
 
-      const docDef = this.pdfGenerator.createDocDefinition(dataForPdf, formFields, headerConfig);
+      const docDef = this.pdfGenerator.createDocDefinition(
+        dataForPdf,
+        formFields,
+        headerConfig,
+        pdfMetadata
+      );
       this.docDefinition.set(docDef);
 
       const url = await this.pdfGenerator.getPdfUrl(docDef);
@@ -61,7 +67,8 @@ export class PdfStateService {
     return this.generatePdfPreviewFromData(
       rawData,
       context.formFields,
-      context.headerConfig, // Pasamos el headerConfig
+      context.headerConfig,
+      context.pdfMetadata,
       context.pdfTitle, // Pasamos el título dinámico
       isLoading
     );

@@ -58,6 +58,12 @@
           },
           "configurations": {
             "production": {
+              "aot": true,
+              "optimization": true,
+              "sourceMap": false,
+              "extractLicenses": false,
+              "namedChunks": false,
+              "outputHashing": "all",
               "budgets": [
                 {
                   "type": "initial",
@@ -69,8 +75,7 @@
                   "maximumWarning": "4kB",
                   "maximumError": "8kB"
                 }
-              ],
-              "outputHashing": "all"
+              ]
             },
             "development": {
               "optimization": false,
