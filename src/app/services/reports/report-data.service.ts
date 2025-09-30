@@ -1,4 +1,4 @@
-import { Injectable, Injector, inject } from '@angular/core';
+import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
   addDoc,
@@ -12,8 +12,7 @@ import {
   updateDoc,
   deleteDoc,
 } from '@angular/fire/firestore';
-import { FormField, ReportData } from '../../models/report.model';
-import { runInInjectionContext } from '@angular/core';
+import { ReportData } from '../../models/report.model';
 
 @Injectable()
 export class ReportDataService {

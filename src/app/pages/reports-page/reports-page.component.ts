@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of } from 'rxjs';
+import { FormGroup } from '@angular/forms';
+import { catchError, firstValueFrom, of } from 'rxjs';
 import {
   FormField,
   HeaderConfig,
@@ -38,22 +38,19 @@ export class ReportsPageComponent {
   public readonly isLoading = signal(false);
   public readonly searchTerm = signal('');
 
-  // Signal to hold the form fields definition, needed for PDF generation
-  private readonly formDefinition = toSignal(
-    this.dynamicFormService.createForm$().pipe(
-      catchError((err) => {
-        console.error('Error loading form definition for PDF generation', err);
-        // Aseguramos que el objeto de fallback tenga la estructura completa
-        return of({
-          form: null,
-          fields: [] as FormField[],
-          title: DEFAULT_REPORT_TITLE,
-          headerConfig: undefined,
-          pdfMetadata: undefined,
-        });
-      })
-    )
-  );
+  // --- INICIO DE LA REFACTORIZACIÓN DE CARGA PEREZOSA ---
+
+  // 1. La definición del formulario ahora se guarda en una señal que empieza como null.
+  //    No se carga al iniciar el componente.
+  private readonly formDefinition = signal<{
+    form: FormGroup | null;
+    fields: FormField[];
+    title: string;
+    headerConfig: HeaderConfig | undefined;
+    pdfMetadata: PdfMetadata | undefined;
+  } | null>(null);
+
+  // 2. Los `computed` ahora dependen de esta nueva señal y manejan el caso `null`.
   public readonly formFields = computed(() => this.formDefinition()?.fields ?? []);
   // Extraemos la configuración de la cabecera de la definición del formulario
   public readonly headerConfig = computed(
@@ -74,6 +71,8 @@ export class ReportsPageComponent {
     // Fallback to the general report title.
     return this.reportTitle();
   });
+
+  // --- FIN DE LA REFACTORIZACIÓN ---
 
   // Signal that holds the list of reports
   public readonly reports = signal<ReportDocument[]>([]);
@@ -119,7 +118,7 @@ export class ReportsPageComponent {
     if (!confirmation) return;
 
     // Llama al servicio para eliminar el reporte
-    const result = await this.reportCrudService.deleteReport(reportId, this.isLoading);
+    const result = await this.reportCrudService.deleteReport(reportId);
     if (result.success) {
       this.notificationService.show('Reporte eliminado con éxito.', 'success');
       this.loadReports(this.searchTerm()); // Recarga la lista para que desaparezca el eliminado
@@ -129,15 +128,14 @@ export class ReportsPageComponent {
   }
 
   async onViewPdf(report: ReportDocument): Promise<void> {
-    const fields = this.formFields();
-    if (fields.length === 0) {
-      this.notificationService.show(
-        'No se pudo cargar la definición del formulario para generar el PDF.',
-        'error'
-      );
+    // 4. Antes de generar el PDF, nos aseguramos de que la definición esté cargada.
+    const isDefinitionLoaded = await this.ensureFormDefinitionIsLoaded();
+    if (!isDefinitionLoaded) {
       return;
     }
 
+    // Ahora que estamos seguros de que está cargada, podemos usar los `computed` signals.
+    const fields = this.formFields();
     const result = await this.pdfStateService.generatePdfPreviewFromData(
       report.data,
       fields,
@@ -149,6 +147,29 @@ export class ReportsPageComponent {
 
     if (!result.success) {
       this.notificationService.show('Hubo un error al generar la vista previa.', 'error');
+    }
+  }
+
+  /**
+   * 3. Método para cargar la definición del formulario bajo demanda.
+   *    Si ya está cargada, no hace nada. Si no, la carga y la guarda en la señal.
+   */
+  private async ensureFormDefinitionIsLoaded(): Promise<boolean> {
+    if (this.formDefinition() !== null) {
+      return true; // Ya está cargada, no hacemos nada.
+    }
+
+    this.isLoading.set(true);
+    try {
+      // Usamos firstValueFrom para convertir el Observable en una Promesa.
+      const definition = await firstValueFrom(this.dynamicFormService.createForm$());
+      this.formDefinition.set(definition);
+      return true;
+    } catch (err) {
+      this.notificationService.show('Error al cargar la configuración del formulario.', 'error');
+      return false;
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

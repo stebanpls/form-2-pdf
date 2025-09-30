@@ -60,6 +60,36 @@ export class CellContentBuilder {
   }
 
   /**
+   * Acorta una URL para su visualización, manteniendo el inicio y el final.
+   * Ej: "https://long.url/path/to/resource" -> "https://long.url/.../resource"
+   * @param url La URL a acortar.
+   * @returns La URL truncada visualmente.
+   */
+  private truncateUrl(url: string): string {
+    const MAX_LENGTH = 45; // Longitud máxima antes de truncar
+    if (url.length <= MAX_LENGTH) {
+      return url;
+    }
+
+    try {
+      // Aseguramos que el objeto URL pueda parsear el link.
+      const urlObject = new URL(url.startsWith('http') ? url : `http://${url}`);
+      const origin = urlObject.origin;
+      const pathParts = urlObject.pathname.split('/').filter(Boolean);
+      const lastPart = pathParts.length > 0 ? pathParts[pathParts.length - 1] : '';
+
+      // Si hay parámetros de búsqueda, los indicamos con '?...' para no hacer la URL larga.
+      const searchIndicator = urlObject.search ? '?...' : '';
+
+      return `${origin}/.../${lastPart}${searchIndicator}`;
+    } catch (e) {
+      // Si no es una URL válida (ej. un texto largo sin formato de URL), la truncamos de forma simple.
+      // Si no es una URL válida, la truncamos de forma simple.
+      return `${url.substring(0, 25)}...${url.substring(url.length - 15)}`;
+    }
+  }
+
+  /**
    * Envuelve las URL de texto sin formato en etiquetas <a> para que puedan ser estilizadas.
    * Es cuidadoso de no envolver URLs que ya están dentro de una etiqueta <a>.
    * @param text El texto a procesar.
@@ -115,7 +145,8 @@ export class CellContentBuilder {
           const url = urlWithProtocol || plainUrl;
           if (url) {
             const href = url.startsWith('http') ? url : `http://${url}`;
-            return `<a href="${href}">${url}</a>`;
+            const displayText = this.truncateUrl(url); // ¡Aquí acortamos el texto!
+            return `<a href="${href}">${displayText}</a>`;
           }
 
           return match; // No debería ocurrir, pero es una salvaguarda.

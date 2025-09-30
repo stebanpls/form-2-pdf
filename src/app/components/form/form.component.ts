@@ -169,12 +169,13 @@ export class FormComponent {
   // Method to save to the Firebase database
   async onSaveToDatabase(): Promise<void> {
     const id = this.reportId();
+    this.isLoading.set(true);
     const result = await this.reportCrudService.saveReport(
       id ?? null,
       this.dataForm,
-      this.formFields(),
-      this.isLoading
+      this.formFields()
     );
+    this.isLoading.set(false);
 
     if (result.success) {
       this.notificationService.show(

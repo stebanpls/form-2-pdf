@@ -15,40 +15,32 @@ export class DetailedMultipleChoiceSectionBuilder implements ISectionBuilder {
     const allOptions = field.options || [];
 
     const sectionTableBody: TableCell[][] = [];
+    let headerRowCount = 0;
 
     // 1. Título de la sección
-    sectionTableBody.push([
-      { text: section.title, style: STYLES.SECTION_HEADER, colSpan: 2, alignment: 'center' },
-      {},
-    ]);
+    if (section.title) {
+      sectionTableBody.push([
+        { text: section.title, style: STYLES.SECTION_HEADER, colSpan: 2, alignment: 'center' },
+        {},
+      ]);
+      headerRowCount++;
+    }
 
     // 2. Etiqueta principal del campo, dividida en filas
-    const labels = field.label.split(/\\n/g);
+    const labels = field.label.split(/\\n/g).filter((l) => l.trim() !== '');
     for (const label of labels) {
       sectionTableBody.push([
         { text: label, style: STYLES.DETAILED_CHOICE_LABEL, colSpan: 2, margin: [0, 2, 0, 2] },
         {},
       ]);
+      headerRowCount++;
     }
 
     // 3. Opciones seleccionadas
     const selectedOptions = allOptions.filter((option) => selectedOptionsData[option.id] === true);
 
-    if (selectedOptions.length === 0) {
-      sectionTableBody.push([
-        {
-          text: '(No se diligenció ninguna opción)',
-          style: STYLES.ANSWER,
-          italics: true,
-          color: 'gray',
-          colSpan: 2,
-          alignment: 'left',
-          margin: [5, 5, 0, 5], // Indentar un poco
-        },
-        {},
-      ]);
-    } else {
-      for (const option of selectedOptions) {
+    if (selectedOptions.length > 0) {
+      selectedOptions.forEach((option, index) => {
         const optionContent: TableCell = {
           stack: [
             { text: [{ text: `${option.label}: `, bold: true }, { text: option.summary || '' }] },
@@ -58,16 +50,38 @@ export class DetailedMultipleChoiceSectionBuilder implements ISectionBuilder {
           colSpan: 2,
           margin: [0, 5, 0, 5], // Espacio vertical entre opciones
         };
-        sectionTableBody.push([optionContent, {}]);
-      }
+
+        const row: any[] = [optionContent, {}];
+
+        // CLAVE 1: Evita encabezados huérfanos. Si la primera fila de datos no cabe,
+        // mueve los encabezados junto con ella a la siguiente página.
+        if (index === 0) {
+          (row as any).keepWithHeaderRows = true;
+        }
+        sectionTableBody.push(row);
+      });
+    } else {
+      // Si no hay opciones seleccionadas, mostramos un mensaje.
+      sectionTableBody.push([
+        {
+          text: '(No se diligenció ninguna opción)',
+          style: STYLES.ANSWER,
+          italics: true,
+          color: 'gray',
+          colSpan: 2,
+          alignment: 'center',
+        },
+        {},
+      ]);
     }
 
-    // 4. Devolvemos la tabla completa
     return {
       table: {
-        headerRows: 1,
+        headerRows: headerRowCount,
         widths: ['auto', '*'],
         body: sectionTableBody,
+        // CLAVE 2: Permitimos que las filas se dividan para aprovechar el espacio.
+        // Al no estar `dontBreakRows: true`, pdfmake puede dividir el contenido de una celda.
       },
       layout: getMainTableLayout(),
       margin: [0, 0, 0, 15],

@@ -14,25 +14,19 @@ export class ReportCrudService {
   async saveReport(
     id: string | null,
     form: FormGroup,
-    formFields: FormField[],
-    isLoading: WritableSignal<boolean>
+    formFields: FormField[]
   ): Promise<ActionResult> {
     if (id) {
-      return this.updateReport(id, form, formFields, isLoading);
+      return this.updateReport(id, form, formFields);
     }
-    return this.createReport(form, formFields, isLoading);
+    return this.createReport(form, formFields);
   }
 
-  async createReport(
-    form: FormGroup,
-    formFields: FormField[],
-    isLoading: WritableSignal<boolean>
-  ): Promise<ActionResult> {
+  async createReport(form: FormGroup, formFields: FormField[]): Promise<ActionResult> {
     if (form.invalid) {
       return { success: false, error: 'Formulario inválido.' };
     }
 
-    isLoading.set(true);
     const rawData = form.getRawValue();
 
     // Asignamos la fecha de elaboración solo al crear un nuevo reporte.
@@ -45,21 +39,13 @@ export class ReportCrudService {
     } catch (e) {
       console.error('Error al guardar en Firestore: ', e);
       return { success: false, error: e };
-    } finally {
-      isLoading.set(false);
     }
   }
 
-  async updateReport(
-    id: string,
-    form: FormGroup,
-    formFields: FormField[],
-    isLoading: WritableSignal<boolean>
-  ): Promise<ActionResult> {
+  async updateReport(id: string, form: FormGroup, formFields: FormField[]): Promise<ActionResult> {
     if (form.invalid) {
       return { success: false, error: 'Formulario inválido.' };
     }
-    isLoading.set(true);
     const cleanData = this._prepareDataForSave(form.getRawValue(), formFields);
     try {
       await this.reportDataService.updateReport(id, cleanData);
@@ -67,13 +53,10 @@ export class ReportCrudService {
     } catch (e) {
       console.error('Error al actualizar en Firestore: ', e);
       return { success: false, error: e };
-    } finally {
-      isLoading.set(false);
     }
   }
 
-  async deleteReport(id: string, isLoading: WritableSignal<boolean>): Promise<ActionResult> {
-    isLoading.set(true);
+  async deleteReport(id: string): Promise<ActionResult> {
     try {
       await this.reportDataService.deleteReport(id);
       return { success: true };
@@ -81,7 +64,6 @@ export class ReportCrudService {
       console.error('Error al eliminar de Firestore: ', e);
       return { success: false, error: e };
     } finally {
-      isLoading.set(false);
     }
   }
 
