@@ -269,6 +269,13 @@ export class CellContentBuilder {
     // Creamos un estilo solo para el texto, quitando las propiedades que son de la celda.
     const textStyle: Style = { ...styleObject };
     delete textStyle.fillColor;
+    // **LA RECOMENDACIÓN CLAVE:** Eliminamos cualquier propiedad de layout que pueda
+    // haber sido heredada, para evitar conflictos con la tabla de centrado.
+    delete textStyle.margin;
+    delete (textStyle as any).paddingLeft;
+    delete (textStyle as any).paddingRight;
+    delete (textStyle as any).paddingTop;
+    delete (textStyle as any).paddingBottom;
 
     return {
       // 1. Propiedades de la celda exterior (color de fondo).
