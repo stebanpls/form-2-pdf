@@ -6,15 +6,21 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormField, HeaderConfig, PdfMetadata } from '../../models/report.model';
+import { FormField, HeaderConfig, PdfMetadata, ReportData } from '../../models/report.model';
 import { ReportForm } from '../../models/form.model';
 import { CommonModule } from '@angular/common';
 import { DynamicFormService } from '../../services/form/dynamic-form.service';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of, map, switchMap, tap } from 'rxjs';
-import { DynamicTableComponent } from '../../shared/components/dynamic-table/dynamic-table.component'; // Assuming this was added
+import { catchError, of, map, switchMap, tap, from } from 'rxjs';
+import { DynamicTableComponent } from '../../shared/components/dynamic-table/dynamic-table.component';
 import { PdfPreviewModalComponent } from '../../shared/components/pdf-preview-modal/pdf-preview-modal.component'; // Assuming this was added
 import { FormFieldComponent } from '../../shared/components/form-field/form-field.component'; // Assuming this was added
 import { PdfStateService } from '../../services/pdf/pdf-state.service';
@@ -23,6 +29,7 @@ import { ReportCrudService } from '../../services/reports/report-crud.service';
 import { ReportDataService } from '../../services/reports/report-data.service';
 import { NotificationService } from '../../services/notification.service';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { FormDefinition } from '../../services/form/dynamic-form.service';
 import { DEFAULT_REPORT_TITLE } from '../../shared/constants/app.constants';
 
 @Component({
@@ -62,7 +69,8 @@ export class FormComponent {
 
   // Define a clear initial state for our form data.
   // This is used both as the initial value for the signal and as a fallback on error.
-  private readonly initialFormState = {
+  private readonly initialFormState: FormDefinition = {
+    id: '',
     form: this.fb.group<{ [key: string]: any }>({}),
     fields: [] as FormField[],
     title: DEFAULT_REPORT_TITLE,
@@ -72,31 +80,56 @@ export class FormComponent {
 
   // A signal that holds the state of our form definition, loaded asynchronously.
   private readonly formDefinition = toSignal(
-    this.dynamicFormService.createForm$().pipe(
+    // CORRECCIÓN: El pipe debe estar en el observable, no en la señal.
+    this.route.paramMap.pipe(
+      map((params) => params.get('id')),
+      switchMap((reportId) => {
+        // Convertimos la lógica asíncrona para obtener el templateId en un Observable
+        const templateId$ = from(
+          (async () => {
+            if (!reportId) {
+              return 'valoracion-individual';
+            }
+            try {
+              const docSnap = await this.reportDataService.getReport(reportId);
+              if (docSnap.exists()) {
+                const reportData = docSnap.data() as ReportData;
+                return reportData['templateId'] || 'valoracion-individual';
+              }
+            } catch (error) {
+              console.error('Error fetching report to determine templateId:', error);
+            }
+            return 'valoracion-individual'; // Fallback
+          })()
+        );
+
+        return templateId$.pipe(
+          switchMap((templateId) => this.dynamicFormService.createForm$(templateId, reportId))
+        );
+      }),
       tap(() => this.isFormLoading.set(false)),
       catchError((error) => {
         console.error('Error initializing form:', error);
-        // Optionally, display an error message to the user in the template.
+        this.notificationService.show('Error al cargar la configuración del formulario.', 'error');
         this.isFormLoading.set(false);
-        // We return an empty state to prevent the app from crashing.
         return of(this.initialFormState);
       })
     ),
-    // Provide a non-null initial value. The form will be empty until the data loads.
     { initialValue: this.initialFormState }
   );
 
   // Computed signals that derive their values from the formDefinition signal.
   // They automatically update when formDefinition changes.
   public readonly formFields = computed(() => this.formDefinition().fields);
-  public readonly reportTitle = computed(
-    () => this.formDefinition()?.title ?? DEFAULT_REPORT_TITLE
-  );
+  // CORRECCIÓN: Accedemos a la señal directamente.
+  public readonly reportTitle = computed(() => this.formDefinition().title ?? DEFAULT_REPORT_TITLE);
 
   // Computed signal to generate the desired PDF filename.
   private readonly pdfFilename = computed(() => {
-    const headerConfig = this.formDefinition()?.headerConfig;
-    if (headerConfig?.documentCode && headerConfig?.documentTitle) {
+    // CORRECCIÓN: Accedemos a la señal directamente.
+    const definition = this.formDefinition();
+    const headerConfig = definition.headerConfig;
+    if (headerConfig && headerConfig.documentCode && headerConfig.documentTitle) {
       return `${headerConfig.documentCode} - ${headerConfig.documentTitle}`;
     }
     // Fallback to the general report title if specific fields are not available.
@@ -105,21 +138,24 @@ export class FormComponent {
 
   // We use a getter to access the form from the main signal and cast it to our strong type.
   public get dataForm(): FormGroup<ReportForm> {
-    return this.formDefinition().form as unknown as FormGroup<ReportForm>;
+    // CORRECCIÓN: Accedemos a la señal directamente.
+    return this.formDefinition().form as FormGroup<ReportForm>;
   }
 
   constructor() {
+    // CORRECCIÓN: Usamos un `effect` para reaccionar cuando el formulario se ha cargado.
+    // Esto nos permite añadir la fila inicial para la tabla en formularios nuevos.
     effect(() => {
-      const id = this.reportId();
-      // This effect runs when the form is created OR when the id changes.
-      // We need to ensure the form has been initialized by formDefinition.
-      const form = this.formDefinition().form;
-      if (Object.keys(form.controls).length === 0) return; // Form not ready
+      const definition = this.formDefinition();
+      const isEditing = !!this.reportId();
 
-      if (id) {
-        this.loadReportForEdit(id);
-      } else {
-        form.reset(); // Clear form when navigating from edit to new
+      // Si el formulario ya se inicializó, no estamos editando y no se está cargando...
+      if (definition.fields.length > 0 && !isEditing && !this.isFormLoading()) {
+        // Buscamos el campo de la tabla dinámica
+        const dynamicTableField = definition.fields.find((f) => f.type === 'dynamic_table');
+        if (dynamicTableField) {
+          this.onAddRow(dynamicTableField);
+        }
       }
     });
   }
@@ -146,35 +182,24 @@ export class FormComponent {
     this.dynamicFormService.removeRowFromTable(formArray, index);
   }
 
-  private async loadReportForEdit(id: string): Promise<void> {
-    this.isLoading.set(true);
-    try {
-      const docSnap = await this.reportDataService.getReport(id);
-      if (docSnap.exists()) {
-        this.dataForm.patchValue(docSnap.data());
-      } else {
-        this.notificationService.show(
-          'Reporte no encontrado. Redirigiendo a un nuevo formulario.',
-          'error'
-        );
-        this.router.navigate(['/formulario']);
-      }
-    } catch (error) {
-      this.notificationService.show(`Error al cargar el reporte: ${error}`, 'error');
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
-
   // Method to save to the Firebase database
   async onSaveToDatabase(): Promise<void> {
     const id = this.reportId();
+    const definition = this.formDefinition();
+
+    // CLAVE: Añadimos el ID de la plantilla a los datos que se van a guardar.
+    // Usamos el ID del documento de la plantilla, que es más robusto que el título.
+    // CORRECCIÓN: `definition` ya es del tipo correcto.
+    const templateId = definition.fields.length > 0 ? definition.id : 'valoracion-individual';
+    const dataToSave = {
+      ...this.dataForm.getRawValue(),
+      templateId: templateId,
+    };
+
     this.isLoading.set(true);
-    const result = await this.reportCrudService.saveReport(
-      id ?? null,
-      this.dataForm,
-      this.formFields()
-    );
+    // CORRECCIÓN: El servicio `saveReport` ahora solo necesita el ID y los datos.
+    // El FormGroup y los fields ya no son necesarios.
+    const result = await this.reportCrudService.saveReport(id ?? null, dataToSave);
     this.isLoading.set(false);
 
     if (result.success) {
@@ -192,11 +217,12 @@ export class FormComponent {
   }
 
   async onGeneratePreview(): Promise<void> {
+    const definition = this.formDefinition();
     const context = {
       form: this.dataForm,
       formFields: this.formFields(),
-      headerConfig: this.formDefinition().headerConfig,
-      pdfMetadata: this.formDefinition().pdfMetadata,
+      headerConfig: definition.headerConfig,
+      pdfMetadata: definition.pdfMetadata,
       pdfTitle: this.pdfFilename(), // Usamos el nombre de archivo dinámico como título
     };
     const result = await this.pdfStateService.generatePdfPreview(context, this.isLoading);

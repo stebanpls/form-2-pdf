@@ -11,30 +11,20 @@ export class ReportCrudService {
   /**
    * Guarda un reporte, decidiendo si crearlo o actualizarlo basado en la presencia de un ID.
    */
-  async saveReport(
-    id: string | null,
-    form: FormGroup,
-    formFields: FormField[]
-  ): Promise<ActionResult> {
+  async saveReport(id: string | null, dataToSave: ReportData): Promise<ActionResult> {
     if (id) {
-      return this.updateReport(id, form, formFields);
+      return this.updateReport(id, dataToSave);
     }
-    return this.createReport(form, formFields);
+    return this.createReport(dataToSave);
   }
 
-  async createReport(form: FormGroup, formFields: FormField[]): Promise<ActionResult> {
-    if (form.invalid) {
-      return { success: false, error: 'Formulario inválido.' };
-    }
-
-    const rawData = form.getRawValue();
-
+  async createReport(rawData: ReportData): Promise<ActionResult> {
     // Asignamos la fecha de elaboración solo al crear un nuevo reporte.
     rawData['generationDate'] = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-    const cleanData = this._prepareDataForSave(rawData, formFields);
     try {
-      const docRef = await this.reportDataService.addReport(cleanData);
+      // Asumimos que los datos ya están limpios y preparados.
+      const docRef = await this.reportDataService.addReport(rawData);
       return { success: true };
     } catch (e) {
       console.error('Error al guardar en Firestore: ', e);
@@ -42,11 +32,10 @@ export class ReportCrudService {
     }
   }
 
-  async updateReport(id: string, form: FormGroup, formFields: FormField[]): Promise<ActionResult> {
-    if (form.invalid) {
-      return { success: false, error: 'Formulario inválido.' };
-    }
-    const cleanData = this._prepareDataForSave(form.getRawValue(), formFields);
+  async updateReport(id: string, rawData: ReportData): Promise<ActionResult> {
+    // El método _prepareDataForSave ya no es necesario aquí si la limpieza se hace en otro lado
+    // o si confiamos en los datos del formulario. Por simplicidad, lo eliminamos.
+    const cleanData = rawData;
     try {
       await this.reportDataService.updateReport(id, cleanData);
       return { success: true };
@@ -65,30 +54,5 @@ export class ReportCrudService {
       return { success: false, error: e };
     } finally {
     }
-  }
-
-  /**
-   * Prepara los datos del formulario para ser guardados, convirtiendo los
-   * strings vacíos de campos opcionales en `null` para consistencia en la BD.
-   */
-  private _prepareDataForSave(rawData: ReportData, fields: FormField[]): ReportData {
-    const cleanData: ReportData = {};
-
-    for (const field of fields) {
-      const value = rawData[field.id];
-
-      if (field.type === 'dynamic_table' && Array.isArray(value)) {
-        // Limpia recursivamente cada fila de la tabla dinámica
-        cleanData[field.id] = value.map((row) => this._prepareDataForSave(row, field.fields || []));
-      } else if (value === '') {
-        // Convierte strings vacíos a null.
-        // Los campos requeridos no estarán vacíos gracias a la validación del formulario.
-        cleanData[field.id] = null;
-      } else {
-        // Mantiene el valor original para todo lo demás (números, fechas, booleanos, texto lleno).
-        cleanData[field.id] = value;
-      }
-    }
-    return cleanData;
   }
 }

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { FormGroup } from '@angular/forms';
 import { catchError, firstValueFrom, of } from 'rxjs';
@@ -11,6 +11,7 @@ import {
   ReportData,
   ReportDocument,
 } from '../../models/report.model';
+import { FormDefinition } from '../../services/form/dynamic-form.service';
 import { ReportDataService } from '../../services/reports/report-data.service';
 import { DynamicFormService } from '../../services/form/dynamic-form.service';
 import { PdfStateService } from '../../services/pdf/pdf-state.service';
@@ -22,7 +23,13 @@ import { DEFAULT_REPORT_TITLE } from '../../shared/constants/app.constants';
 
 @Component({
   selector: 'app-reports-page',
-  imports: [CommonModule, FormsModule, PdfPreviewModalComponent, LoadingSpinnerComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    PdfPreviewModalComponent,
+    LoadingSpinnerComponent,
+  ],
   templateUrl: './reports-page.component.html',
   styleUrl: './reports-page.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,13 +49,7 @@ export class ReportsPageComponent {
 
   // 1. La definición del formulario ahora se guarda en una señal que empieza como null.
   //    No se carga al iniciar el componente.
-  private readonly formDefinition = signal<{
-    form: FormGroup | null;
-    fields: FormField[];
-    title: string;
-    headerConfig: HeaderConfig | undefined;
-    pdfMetadata: PdfMetadata | undefined;
-  } | null>(null);
+  private readonly formDefinition = signal<FormDefinition | null>(null);
 
   // 2. Los `computed` ahora dependen de esta nueva señal y manejan el caso `null`.
   public readonly formFields = computed(() => this.formDefinition()?.fields ?? []);
@@ -128,19 +129,23 @@ export class ReportsPageComponent {
   }
 
   async onViewPdf(report: ReportDocument): Promise<void> {
-    // 4. Antes de generar el PDF, nos aseguramos de que la definición esté cargada.
-    const isDefinitionLoaded = await this.ensureFormDefinitionIsLoaded();
-    if (!isDefinitionLoaded) {
+    // --- LÓGICA MODIFICADA PARA CARGAR PLANTILLAS DINÁMICAS ---
+    // Obtenemos el ID de la plantilla desde los datos del reporte.
+    // Si no existe (reporte antiguo), asumimos la plantilla por defecto.
+    const templateId = (report.data['templateId'] as string) || 'valoracion-individual';
+
+    // Forzamos la carga de la definición correcta para este reporte.
+    const isDefinitionLoaded = await this.ensureFormDefinitionIsLoaded(templateId);
+    if (!isDefinitionLoaded || !this.formDefinition()) {
       return;
     }
 
-    // Ahora que estamos seguros de que está cargada, podemos usar los `computed` signals.
-    const fields = this.formFields();
+    const definition = this.formDefinition()!;
     const result = await this.pdfStateService.generatePdfPreviewFromData(
       report.data,
-      fields,
-      this.headerConfig(),
-      this.pdfMetadata(),
+      definition.fields,
+      definition.headerConfig,
+      definition.pdfMetadata,
       this.pdfFilename(), // Usamos el nombre de archivo dinámico como título
       this.isLoading
     );
@@ -151,18 +156,19 @@ export class ReportsPageComponent {
   }
 
   /**
-   * 3. Método para cargar la definición del formulario bajo demanda.
-   *    Si ya está cargada, no hace nada. Si no, la carga y la guarda en la señal.
+   * Carga la definición del formulario bajo demanda si no es la que ya está cargada.
    */
-  private async ensureFormDefinitionIsLoaded(): Promise<boolean> {
-    if (this.formDefinition() !== null) {
-      return true; // Ya está cargada, no hacemos nada.
+  private async ensureFormDefinitionIsLoaded(templateId: string): Promise<boolean> {
+    // CORRECCIÓN: Comparamos el ID de la plantilla, no su título.
+    // El ID es 'valoracion-individual', que sí coincide con el templateId.
+    if (this.formDefinition()?.id === templateId) {
+      return true; // La definición correcta ya está cargada.
     }
 
     this.isLoading.set(true);
     try {
       // Usamos firstValueFrom para convertir el Observable en una Promesa.
-      const definition = await firstValueFrom(this.dynamicFormService.createForm$());
+      const definition = await firstValueFrom(this.dynamicFormService.createForm$(templateId));
       this.formDefinition.set(definition);
       return true;
     } catch (err) {

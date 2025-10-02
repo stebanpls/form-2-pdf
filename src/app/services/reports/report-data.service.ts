@@ -20,13 +20,6 @@ export class ReportDataService {
   private firestore = inject(Firestore);
   private injector = inject(Injector);
 
-  getFormDefinition() {
-    return runInInjectionContext(this.injector, () => {
-      const formDefRef = doc(this.firestore, 'form-templates', 'reportTemplate');
-      return getDoc(formDefRef);
-    });
-  }
-
   getReport(id: string) {
     return runInInjectionContext(this.injector, () => {
       const reportDocRef = doc(this.firestore, 'reports', id);
