@@ -4,10 +4,12 @@ import { ReportData, FormField } from '../../../models/report.model';
 describe('ReportPdfBuilder', () => {
   let builder: ReportPdfBuilder;
 
+  const mockPdfGeneratorService: any = {};
+
   beforeEach(() => {
     // No se necesita TestBed para una clase simple.
     // Simplemente creamos una nueva instancia.
-    builder = new ReportPdfBuilder();
+    builder = new ReportPdfBuilder(mockPdfGeneratorService);
   });
 
   it('should be created', () => {
@@ -25,7 +27,7 @@ describe('ReportPdfBuilder', () => {
     ];
 
     // Ejecutamos el método a probar
-    const docDefinition = builder.build(mockData, mockFields);
+    const docDefinition = builder.build(mockData, mockFields, undefined, undefined);
 
     // Verificamos que el resultado tiene la estructura esperada
     expect(docDefinition).toBeDefined();

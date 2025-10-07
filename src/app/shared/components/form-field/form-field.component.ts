@@ -5,6 +5,7 @@ import { FormField } from '../../../models/report.model';
 
 @Component({
   selector: 'app-form-field',
+  standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './form-field.component.html',
   styleUrl: './form-field.component.css',

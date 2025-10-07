@@ -5,6 +5,7 @@ import { NotificationComponent } from './shared/components/notification/notifica
 
 @Component({
   selector: 'app-root',
+  standalone: true,
   imports: [RouterOutlet, NavbarComponent, NotificationComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',

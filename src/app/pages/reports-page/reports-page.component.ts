@@ -23,6 +23,7 @@ import { DEFAULT_REPORT_TITLE } from '../../shared/constants/app.constants';
 
 @Component({
   selector: 'app-reports-page',
+  standalone: true,
   imports: [
     CommonModule,
     FormsModule,

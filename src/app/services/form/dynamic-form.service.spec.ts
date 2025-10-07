@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { DynamicFormService } from './form/dynamic-form.service';
+import { DynamicFormService } from './dynamic-form.service';
 
 describe('DynamicFormService', () => {
   let service: DynamicFormService;
