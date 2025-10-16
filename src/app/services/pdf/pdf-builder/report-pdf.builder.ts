@@ -202,13 +202,13 @@ export class ReportPdfBuilder {
                 paddingLeft: () => CELL_HORIZONTAL_PADDING / 2,
                 paddingRight: () => CELL_HORIZONTAL_PADDING / 2,
               },
-              verticalAlign: 'center',
+              // verticalAlign: 'center', // Esta propiedad no es válida en este nivel del objeto. El centrado se logra con la tabla anidada.
             },
             // --- Columna 2: Texto Central ---
             {
               table: {
                 widths: ['*'],
-                heights: ['*', 'auto', '*'],
+                // heights: ['*', 'auto', '*'], // '*' no es un valor válido para heights. Al omitirlo, pdfmake centra verticalmente por defecto.
                 body: [
                   [''],
                   [
@@ -229,7 +229,7 @@ export class ReportPdfBuilder {
             {
               table: {
                 widths: ['*'],
-                heights: ['*', 'auto', '*'],
+                // heights: ['*', 'auto', '*'], // '*' no es un valor válido para heights.
                 body: [
                   [''],
                   [logoToUse ? { image: logoToUse, width: 80, alignment: 'center' } : {}],
