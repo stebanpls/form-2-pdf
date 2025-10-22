@@ -1,1 +1,27 @@
+# Normaliza los finales de línea para todos los archivos de texto a LF.
+# Esto previene conflictos entre Windows (CRLF) y Linux/macOS (LF).
 * text=auto
+
+# -----------------------------------------------------------------------------
+# Especifica que los siguientes tipos de archivo son binarios.
+# Esto evita que Git intente normalizar sus finales de línea, lo que podría
+# corromperlos.
+# -----------------------------------------------------------------------------
+
+# Imágenes
+*.jpeg binary
+*.jpg binary
+*.png binary
+*.gif binary
+*.ico binary
+
+# Documentos
+*.pdf binary
+*.docx binary
+*.xlsx binary
+
+# Fuentes
+*.eot binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
