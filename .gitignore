@@ -13,8 +13,8 @@
 npm-debug.log
 yarn-error.log
 yarn-debug.log*
-package-lock.json
-yarn.lock
+# package-lock.json
+# yarn.lock
 
 # Environment files
 /.env.js
@@ -41,7 +41,6 @@ yarn.lock
 /.angular/cache
 .sass-cache/
 /connect.lock
-/coverage
 /libpeerconnection.log
 testem.log
 /typings
@@ -67,3 +66,8 @@ Thumbs.db
 
 # Document Files
 *.pdf
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.pptx
